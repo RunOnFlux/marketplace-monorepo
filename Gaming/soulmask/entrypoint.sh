@@ -210,10 +210,33 @@ if ! steamcmd_update; then
 fi
 ensure_steamclient
 
-server_bin="${STEAM_INSTALL_DIR}/WS/Binaries/Linux/WSServer-Linux-Shipping"
-if [[ ! -x "${server_bin}" ]]; then
-  log_err "ERROR: Server binary not found or not executable: ${server_bin}"
+locate_server_bin() {
+  local expected="${STEAM_INSTALL_DIR}/WS/Binaries/Linux/WSServer-Linux-Shipping"
+  if [[ -x "${expected}" ]]; then
+    printf '%s' "${expected}"
+    return 0
+  fi
+
+  local found=""
+  found="$(find "${STEAM_INSTALL_DIR}" -maxdepth 6 -type f -name 'WSServer-Linux-Shipping' 2>/dev/null | head -n 1 || true)"
+  if [[ -n "${found}" ]]; then
+    chmod +x "${found}" >/dev/null 2>&1 || true
+    printf '%s' "${found}"
+    return 0
+  fi
+
+  return 1
+}
+
+server_bin="$(locate_server_bin || true)"
+if [[ -z "${server_bin}" ]] || [[ ! -x "${server_bin}" ]]; then
+  log_err "ERROR: Server binary not found or not executable under ${STEAM_INSTALL_DIR}"
+  log_err "Expected: ${STEAM_INSTALL_DIR}/WS/Binaries/Linux/WSServer-Linux-Shipping"
+  log_err "Tip: If this keeps happening on Flux, ensure you're installing the Linux server tool (Steam AppID 3017300)."
   log_err "Check SteamCMD logs at: ${STEAMCMD_LOG_FILE:-/data/steam/steamcmd.log}"
+  log_err "Directory hints:"
+  ls -la "${STEAM_INSTALL_DIR}" 2>/dev/null | head -n 50 || true
+  ls -la "${STEAM_INSTALL_DIR}/WS/Binaries" 2>/dev/null | head -n 50 || true
   exit 1
 fi
 

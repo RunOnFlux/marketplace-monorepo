@@ -9,7 +9,7 @@ LABEL org.opencontainers.image.description="Official Soulmask dedicated server v
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-ENV STEAM_APP_ID=3017310 \
+ENV STEAM_APP_ID=3017300 \
     STEAM_INSTALL_DIR=/data/server \
     STEAM_LOGIN=anonymous \
     STEAM_PASSWORD= \

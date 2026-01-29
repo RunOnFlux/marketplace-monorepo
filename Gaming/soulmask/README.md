@@ -56,7 +56,7 @@ To join in-game:
 ### SteamCMD / install
 
 - `AUTO_UPDATE` (default: `true`)
-- `STEAM_APP_ID` (default: `3017300`) — Soulmask Dedicated Server tool
+- `STEAM_APP_ID` (default: `3017300`) — Soulmask Dedicated Server tool (Linux)
 - `STEAM_INSTALL_DIR` (default: `/data/server`)
 - `STEAMCMD_HOME` (default: `/data/steam`)
 - `STEAMCMD_LOG_FILE` (default: `/data/steam/steamcmd.log`)
