@@ -13,6 +13,7 @@ Key goals:
 Default ports:
 
 - `7777/udp` — game port
+- `7777/tcp` — some hosts recommend opening TCP as well
 - `27015/udp` — query port (Steam)
 
 Optional:
@@ -30,6 +31,7 @@ Optional:
 
 ```bash
 docker run -d --name soulmask \
+  -p 7777:7777/tcp \
   -p 7777:7777/udp \
   -p 27015:27015/udp \
   -p 18888:18888/tcp \
