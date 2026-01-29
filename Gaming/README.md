@@ -9,3 +9,4 @@
 - `valheim/` → Valheim dedicated server (SteamCMD, headless, Flux-friendly)
 - `v-rising/` → V Rising dedicated server (SteamCMD + Wine, Flux-friendly)
 - `soulmask/` → Soulmask dedicated server (SteamCMD, headless, Flux-friendly)
+- `project-zomboid/` → Project Zomboid dedicated server (SteamCMD, headless, Flux-friendly)
