@@ -16,6 +16,10 @@ is_true() {
   esac
 }
 
+is_int() {
+  [[ "${1:-}" =~ ^-?[0-9]+$ ]]
+}
+
 trim() {
   local s="$1"
   s="${s#"${s%%[![:space:]]*}"}"
@@ -107,6 +111,100 @@ mask_args_for_log() {
     i=$((i + 1))
   done
   printf '%s' "${out[*]}"
+}
+
+discover_map_info() {
+  local dir="$1"
+  local newest=""
+
+  newest="$(ls -1t "${dir}"/*.map 2>/dev/null | head -n1 || true)"
+  if [[ -z "${newest}" ]]; then
+    newest="$(ls -1t "${dir}"/*.sav 2>/dev/null | head -n1 || true)"
+  fi
+  if [[ -z "${newest}" ]]; then
+    return 1
+  fi
+
+  local base
+  base="$(basename "${newest}")"
+  base="${base%.*}"
+
+  if [[ "${base}" =~ \.([0-9]+)\.([0-9]+)$ ]]; then
+    printf '%s %s' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+    return 0
+  fi
+
+  return 1
+}
+
+rand_seed() {
+  # bash RANDOM is 0..32767; combine to get a 31-bit integer > 0
+  printf '%s' "$(( (RANDOM << 16) + RANDOM + 1 ))"
+}
+
+atomic_write_number() {
+  local path="$1"
+  local value="$2"
+  local tmp="${path}.tmp.$$"
+  printf '%s\n' "${value}" >"${tmp}"
+  mv -f "${tmp}" "${path}"
+}
+
+wait_for_synced_world_files() {
+  local identity_dir="$1"
+  local wait_s="${RUST_SYNC_WAIT_SECONDS:-900}"
+  local fail="${RUST_SYNC_WAIT_FAIL:-true}"
+
+  if ! is_int "${wait_s}" || (( wait_s < 0 )); then
+    wait_s=900
+  fi
+
+  local has_player_files="false"
+  if find "${identity_dir}" -maxdepth 1 -type f -name 'player*' -print -quit 2>/dev/null | grep -q .; then
+    has_player_files="true"
+  fi
+
+  local has_world_files="false"
+  if find "${identity_dir}" -maxdepth 1 -type f \( -name '*.map' -o -name '*.sav' \) -print -quit 2>/dev/null | grep -q .; then
+    has_world_files="true"
+  fi
+
+  if [[ "${has_player_files}" != "true" || "${has_world_files}" == "true" ]]; then
+    return 0
+  fi
+
+  if (( wait_s == 0 )); then
+    log_err "ERROR: Detected existing player data but no world files in ${identity_dir}; refusing to start."
+    exit 1
+  fi
+
+  log "Detected existing player data but no world files yet (likely g:/ sync still catching up)."
+  log "Waiting up to ${wait_s}s for *.map/*.sav to appear before starting..."
+
+  local start
+  start="$(date +%s)"
+  while true; do
+    if find "${identity_dir}" -maxdepth 1 -type f \( -name '*.map' -o -name '*.sav' \) -print -quit 2>/dev/null | grep -q .; then
+      log "World files detected; continuing startup."
+      return 0
+    fi
+
+    local now elapsed
+    now="$(date +%s)"
+    elapsed=$((now - start))
+    if (( elapsed >= wait_s )); then
+      if is_true "${fail}"; then
+        log_err "ERROR: Timed out waiting for world files in ${identity_dir} (${wait_s}s)."
+        log_err "Refusing to start to avoid generating a new world and wiping player progress."
+        log_err "If you want to force-start anyway, set RUST_SYNC_WAIT_FAIL=false (not recommended)."
+        exit 1
+      fi
+      log_err "WARNING: Timed out waiting for world files; continuing anyway (RUST_SYNC_WAIT_FAIL=false)."
+      return 0
+    fi
+
+    sleep 5
+  done
 }
 
 STEAMCMD="/home/steam/steamcmd/steamcmd.sh"
@@ -249,11 +347,65 @@ if [[ ! -x "${server_bin}" ]]; then
   exit 1
 fi
 
-cfg_dir="/config/server/${identity}/cfg"
+identity_dir="/config/server/${identity}"
+cfg_dir="${identity_dir}/cfg"
 mkdir -p "${cfg_dir}"
 if [[ "$(id -u)" -eq 0 ]]; then
   chown -R steam:steam "/config/server/${identity}" >/dev/null 2>&1 || true
 fi
+
+wait_for_synced_world_files "${identity_dir}"
+
+map_worldsize=""
+map_seed=""
+if map_info="$(discover_map_info "${identity_dir}" 2>/dev/null)"; then
+  map_worldsize="${map_info%% *}"
+  map_seed="${map_info##* }"
+fi
+
+seed_file="${identity_dir}/seed.txt"
+worldsize_file="${identity_dir}/worldsize.txt"
+
+effective_seed="${RUST_SEED:-0}"
+if ! is_int "${effective_seed}"; then
+  effective_seed=0
+fi
+
+if (( effective_seed <= 0 )); then
+  if [[ -f "${seed_file}" ]]; then
+    seed_from_file="$(trim "$(cat "${seed_file}" 2>/dev/null || true)")"
+    if is_int "${seed_from_file}" && (( seed_from_file > 0 )); then
+      effective_seed="${seed_from_file}"
+    fi
+  fi
+fi
+
+if (( effective_seed <= 0 )) && [[ -n "${map_seed}" ]] && is_int "${map_seed}"; then
+  effective_seed="${map_seed}"
+fi
+
+if (( effective_seed <= 0 )); then
+  effective_seed="$(rand_seed)"
+fi
+
+effective_worldsize="${RUST_WORLD_SIZE:-3000}"
+if ! is_int "${effective_worldsize}"; then
+  effective_worldsize=3000
+fi
+
+if [[ -z "${RUST_WORLD_SIZE:-}" ]]; then
+  if [[ -f "${worldsize_file}" ]]; then
+    ws_from_file="$(trim "$(cat "${worldsize_file}" 2>/dev/null || true)")"
+    if is_int "${ws_from_file}" && (( ws_from_file > 0 )); then
+      effective_worldsize="${ws_from_file}"
+    fi
+  elif [[ -n "${map_worldsize}" ]] && is_int "${map_worldsize}"; then
+    effective_worldsize="${map_worldsize}"
+  fi
+fi
+
+atomic_write_number "${seed_file}" "${effective_seed}" >/dev/null 2>&1 || true
+atomic_write_number "${worldsize_file}" "${effective_worldsize}" >/dev/null 2>&1 || true
 
 server_cfg="${cfg_dir}/server.cfg"
 if is_true "${RUST_WRITE_CFG:-true}"; then
@@ -264,8 +416,8 @@ server.url "$(one_line "${RUST_SERVER_URL:-}")"
 server.headerimage "$(one_line "${RUST_SERVER_HEADERIMAGE:-}")"
 server.tags "$(one_line "${RUST_SERVER_TAGS:-vanilla,flux}")"
 server.maxplayers ${RUST_MAX_PLAYERS:-100}
-server.seed ${RUST_SEED:-0}
-server.worldsize ${RUST_WORLD_SIZE:-3000}
+server.seed ${effective_seed}
+server.worldsize ${effective_worldsize}
 server.saveinterval ${RUST_SAVE_INTERVAL:-600}
 server.tickrate ${RUST_TICKRATE:-30}
 server.secure $(normalize_bool "${RUST_SERVER_SECURE:-true}")

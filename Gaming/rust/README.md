@@ -48,10 +48,21 @@ Persistent server files are stored under:
 
 ### World settings
 - `RUST_LEVEL` (default: `Procedural Map`)
-- `RUST_SEED` (default: `0` = random)
+- `RUST_SEED`
+  - set a number (recommended) for a fixed world
+  - or use `0` to auto-generate **once** and persist it to `/config/server/<identity>/seed.txt`
 - `RUST_WORLD_SIZE` (default: `3000`)
 - `RUST_MAX_PLAYERS` (default: `100`)
 - `RUST_SAVE_INTERVAL` (default: `600` seconds)
+
+### Failover safety (Flux)
+When Flux fails over to another node, `g:/config` may take time to sync large world files. If the server starts without the world save present, it can generate a new world and you may see messages like:
+“PlayerState was from old protocol or different seed… Clearing player state”.
+
+This image mitigates that by waiting when it detects player data but no world save yet.
+
+- `RUST_SYNC_WAIT_SECONDS` (default: `900`) — max time to wait for `*.map/*.sav` to appear in `/config/server/<identity>/`
+- `RUST_SYNC_WAIT_FAIL` (default: `true`) — when `true`, the container exits instead of generating a new world (recommended)
 
 ### RCON (recommended)
 - `RUST_RCON_PASSWORD` (**set this**)
@@ -75,4 +86,3 @@ The provided `flux-spec.json` is set to **3 instances** and uses **2 components*
 
 - If the server won’t start, check SteamCMD logs: `/data/steam/steamcmd.log`
 - If you see OOM or instability, raise Flux RAM and adjust `RUST_WORLD_SIZE` / `RUST_MAX_PLAYERS`.
-
