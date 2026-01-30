@@ -318,6 +318,23 @@ if not version or not sha or not download_url:
   print(f"Unexpected metadata payload: {second}", file=sys.stderr)
   raise SystemExit(1)
 
+if not download_url.lower().startswith("http"):
+  # download_url is typically a relative path like "builds/release/<ver>.zip".
+  # Resolve it to a signed R2 URL via the authenticated game-assets endpoint.
+  asset_url = f"https://account-data.hytale.com/game-assets/{download_url.lstrip('/')}"
+  req3 = urllib.request.Request(
+    asset_url,
+    headers={"Authorization": f"Bearer {token}", "User-Agent": UA, "Accept": "application/json"},
+    method="GET",
+  )
+  with urllib.request.urlopen(req3, timeout=25) as resp:
+    third = json.loads(resp.read().decode("utf-8", errors="replace"))
+  resolved = str(third.get("url") or "").strip()
+  if not resolved:
+    print(f"Asset URL response missing url: {third}", file=sys.stderr)
+    raise SystemExit(1)
+  download_url = resolved
+
 print(version)
 print(sha)
 print(download_url)
@@ -1049,6 +1066,21 @@ if not version or not sha or not download_url:
   print(f"Unexpected metadata payload: {second}", file=sys.stderr)
   raise SystemExit(1)
 
+if not download_url.lower().startswith("http"):
+  asset_url = f"https://account-data.hytale.com/game-assets/{download_url.lstrip('/')}"
+  req3 = urllib.request.Request(
+    asset_url,
+    headers={"Authorization": f"Bearer {token}", "User-Agent": UA, "Accept": "application/json"},
+    method="GET",
+  )
+  with urllib.request.urlopen(req3, timeout=25) as resp:
+    third = json.loads(resp.read().decode("utf-8", errors="replace"))
+  resolved = str(third.get("url") or "").strip()
+  if not resolved:
+    print(f"Asset URL response missing url: {third}", file=sys.stderr)
+    raise SystemExit(1)
+  download_url = resolved
+
 print(version)
 print(sha)
 print(download_url)
@@ -1334,6 +1366,21 @@ download_url = str(second.get("download_url") or "").strip()
 if not version or not sha or not download_url:
   print(f"Unexpected metadata payload: {second}", file=sys.stderr)
   raise SystemExit(1)
+
+if not download_url.lower().startswith("http"):
+  asset_url = f"https://account-data.hytale.com/game-assets/{download_url.lstrip('/')}"
+  req3 = urllib.request.Request(
+    asset_url,
+    headers={"Authorization": f"Bearer {token}", "User-Agent": UA, "Accept": "application/json"},
+    method="GET",
+  )
+  with urllib.request.urlopen(req3, timeout=25) as resp:
+    third = json.loads(resp.read().decode("utf-8", errors="replace"))
+  resolved = str(third.get("url") or "").strip()
+  if not resolved:
+    print(f"Asset URL response missing url: {third}", file=sys.stderr)
+    raise SystemExit(1)
+  download_url = resolved
 
 print(version)
 print(sha)
