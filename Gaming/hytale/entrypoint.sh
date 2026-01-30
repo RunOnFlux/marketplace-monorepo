@@ -1318,6 +1318,12 @@ if ! ensure_hytale_auth; then
   idle_forever
 fi
 
+if [[ "$HYTALE_AUTH_MODE" == "authenticated" ]]; then
+  if [[ -n "${HYTALE_SERVER_IDENTITY_TOKEN:-}" && -n "${HYTALE_SERVER_SESSION_TOKEN:-}" ]]; then
+    args+=(--identity-token "$HYTALE_SERVER_IDENTITY_TOKEN" --session-token "$HYTALE_SERVER_SESSION_TOKEN")
+  fi
+fi
+
 msg "Starting Hytale server..."
 msg "- Bind: ${HYTALE_BIND} (UDP)"
 msg "- Auth mode: ${HYTALE_AUTH_MODE}"

@@ -146,6 +146,9 @@ _RE_DEVICE_VERIFY = re.compile(r"(https?://\S+)", re.IGNORECASE)
 _RE_AUTH_HELPER_URL = re.compile(r"^\s*-\s*URL:\s*(https?://\S+)\s*$", re.IGNORECASE)
 _RE_AUTH_HELPER_CODE = re.compile(r"^\s*-\s*Code:\s*([A-Z0-9-]+)\s*$", re.IGNORECASE)
 _RE_USER_CODE_QUERY = re.compile(r"[?&]user_code=([A-Z0-9-]+)", re.IGNORECASE)
+_RE_SERVER_DEVICE_VISIT = re.compile(r"\\bVisit:\\s*(https?://\\S+)", re.IGNORECASE)
+_RE_SERVER_DEVICE_OR_VISIT = re.compile(r"\\bOr visit:\\s*(https?://\\S+)", re.IGNORECASE)
+_RE_SERVER_DEVICE_CODE = re.compile(r"\\bEnter code:\\s*([A-Z0-9-]+)", re.IGNORECASE)
 
 
 def extract_device_auth_from_log(log_text: str) -> dict[str, Any] | None:
@@ -155,6 +158,24 @@ def extract_device_auth_from_log(log_text: str) -> dict[str, Any] | None:
     source: str | None = None
 
     for idx, line in enumerate(lines):
+        server_or_url = _RE_SERVER_DEVICE_OR_VISIT.search(line)
+        if server_or_url:
+            device_url = server_or_url.group(1).strip()
+            source = "server"
+            continue
+
+        server_visit = _RE_SERVER_DEVICE_VISIT.search(line)
+        if server_visit and not device_url:
+            device_url = server_visit.group(1).strip()
+            source = "server"
+            continue
+
+        server_code = _RE_SERVER_DEVICE_CODE.search(line)
+        if server_code:
+            device_code = server_code.group(1).strip()
+            source = "server"
+            continue
+
         if "Please visit the following URL to authenticate" in line:
             next_line = lines[idx + 1].strip() if idx + 1 < len(lines) else ""
             match = _RE_DEVICE_VERIFY.search(next_line)
@@ -623,4 +644,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
