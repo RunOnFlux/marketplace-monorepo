@@ -1,0 +1,77 @@
+{
+  "version": 8,
+  "name": "project-zomboid-flux",
+  "description": "Project Zomboid Dedicated Server (official via SteamCMD). Uses local /data for install/cache and synced g:/config for saves/config. Note: Flux blocks the default PZ ports, so this spec uses 27165/udp and 27166/udp.",
+  "owner": "YOUR_ZELID_HERE",
+  "compose": [
+    {
+      "name": "data",
+      "description": "Local cache volume for Steam (not synced)",
+      "repotag": "alpine:3.20",
+      "ports": [],
+      "domains": [],
+      "environmentParameters": [],
+      "commands": [
+        "sh",
+        "-lc",
+        "while true; do sleep 3600; done"
+      ],
+      "containerPorts": [],
+      "containerData": "/data",
+      "cpu": 0.1,
+      "ram": 200,
+      "hdd": 20,
+      "repoauth": ""
+    },
+    {
+      "name": "server",
+      "description": "Project Zomboid server (g:/config for saves/config; local /data install)",
+      "repotag": "runonflux/project-zomboid-flux:latest",
+      "ports": [
+        27165,
+        27166
+      ],
+      "containerPorts": [
+        27165,
+        27166
+      ],
+      "domains": [
+        "",
+        ""
+      ],
+      "environmentParameters": [
+        "PZ_SERVER_NAME=servertest",
+        "PZ_PUBLIC_NAME=RunOnFlux - Project Zomboid",
+        "PZ_PUBLIC_DESCRIPTION=Project Zomboid dedicated server on Flux.",
+        "PZ_PUBLIC=true",
+        "PZ_OPEN=true",
+        "PZ_MAX_PLAYERS=16",
+        "PZ_PVP=false",
+        "PZ_MAP=Muldraugh, KY",
+        "PZ_SAVE_EVERY_MINUTES=10",
+        "PZ_PORT=27165",
+        "PZ_UDP_PORT=27166",
+        "PZ_PASSWORD=",
+        "PZ_ADMIN_USERNAME=admin",
+        "PZ_ADMIN_PASSWORD=CHANGE_ME",
+        "PZ_MODS=",
+        "PZ_WORKSHOP_ITEMS=",
+        "PZ_JAVA_XMS=512m",
+        "PZ_JAVA_XMX=2048m"
+      ],
+      "commands": [],
+      "containerData": "g:/config|0:/data",
+      "cpu": 2,
+      "ram": 4000,
+      "hdd": 10,
+      "repoauth": ""
+    }
+  ],
+  "instances": 3,
+  "contacts": [],
+  "geolocation": [],
+  "expire": 22000,
+  "nodes": [],
+  "staticip": false,
+  "enterprise": ""
+}

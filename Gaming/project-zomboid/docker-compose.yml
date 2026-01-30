@@ -1,0 +1,26 @@
+services:
+  data:
+    image: alpine:3.20
+    command: ["sh", "-lc", "while true; do sleep 3600; done"]
+    volumes:
+      - pz_data:/data
+
+  server:
+    build: .
+    image: runonflux/project-zomboid-flux:local
+    depends_on:
+      - data
+    env_file:
+      - .env
+    ports:
+      - "16261:16261/udp"
+      - "16262:16262/udp"
+      # RCON (optional):
+      - "27015:27015/tcp"
+    volumes:
+      - pz_data:/data
+      - pz_config:/config
+
+volumes:
+  pz_data:
+  pz_config:
