@@ -2498,7 +2498,7 @@
         { name: "Device Link", desc: "Start device authentication", cmd: "/auth login device", confirm: "Start device auth on the server?", icon: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>' }
       ],
       advanced: [
-        { name: "Stop Server", desc: "Gracefully stop the server", cmd: "/stop", confirm: "Are you sure you want to stop the server?", danger: true, icon: '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>' }
+        { name: "Restart (Flux)", desc: "Restart the app/container from Flux UI (recommended)", action: "restart_help", badge: "Flux UI", icon: '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/>' }
       ]
     };
 
@@ -2535,7 +2535,7 @@
 
           const cmdSpan = document.createElement("span");
           cmdSpan.className = "preset-cmd";
-          cmdSpan.textContent = p.cmd;
+          cmdSpan.textContent = p.cmd || p.badge || "";
 
           btn.appendChild(iconDiv);
           btn.appendChild(infoDiv);
@@ -2543,6 +2543,11 @@
 
           btn.addEventListener("click", async function() {
             if (p.confirm && !confirm(p.confirm)) return;
+            if (p.action === "restart_help") {
+              toast("Hytale has no /restart command. Restart the app/component from the Flux UI (or restart the container).", "info");
+              return;
+            }
+            if (!p.cmd) return;
             await sendCommand(p.cmd);
           });
 
