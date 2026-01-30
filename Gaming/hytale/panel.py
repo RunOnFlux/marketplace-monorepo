@@ -606,7 +606,16 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             try:
-                form = cgi.FieldStorage(fp=self.rfile, headers=self.headers, environ={"REQUEST_METHOD": "POST"})
+                length = int(self.headers.get("Content-Length", "0") or "0")
+                form = cgi.FieldStorage(
+                    fp=self.rfile,
+                    headers=self.headers,
+                    environ={
+                        "REQUEST_METHOD": "POST",
+                        "CONTENT_TYPE": self.headers.get("Content-Type", ""),
+                        "CONTENT_LENGTH": str(length),
+                    },
+                )
             except Exception as exc:
                 self.send_response(HTTPStatus.BAD_REQUEST)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
@@ -615,14 +624,23 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             item = form["file"] if "file" in form else None
-            if not item or not getattr(item, "filename", ""):
+            if item is None:
+                self.send_response(HTTPStatus.BAD_REQUEST)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(b"Missing file\n")
+                return
+            if isinstance(item, list):
+                item = item[0] if item else None
+            filename_raw = getattr(item, "filename", "") if item is not None else ""
+            if not filename_raw:
                 self.send_response(HTTPStatus.BAD_REQUEST)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(b"Missing file\n")
                 return
 
-            filename = os.path.basename(str(item.filename))
+            filename = os.path.basename(str(filename_raw))
             if not filename:
                 self.send_response(HTTPStatus.BAD_REQUEST)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
