@@ -1,780 +1,2749 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Flux Game Server Panel · Hytale</title>
-    <style>
-      :root { color-scheme: dark; }
-      :root{
-        --bg0:#070a12;
-        --bg1:#0b1020;
-        --panel: rgba(255,255,255,.045);
-        --stroke: rgba(255,255,255,.10);
-        --stroke2: rgba(255,255,255,.16);
-        --text:#ecf2ff;
-        --muted: rgba(236,242,255,.70);
-        --muted2: rgba(236,242,255,.52);
-        --accent: #00e5a8;
-        --accent2:#00b3ff;
-        --danger:#ff5b6e;
-        --warn:#ffcc00;
-        --shadow: 0 28px 80px rgba(0,0,0,.58);
-        --shadow2: 0 14px 42px rgba(0,0,0,.45);
-        --r: 18px;
-        --monoSize: 13px;
-      }
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flux Game Server Panel - Hytale</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════════════════════════════
+       FLUX GAME SERVER PANEL - PREMIUM HOSTING UI
+       Design: Deep space aesthetic with teal/cyan accents
+       ═══════════════════════════════════════════════════════════════════════ */
 
-      *{ box-sizing: border-box; }
+    :root {
+      color-scheme: dark;
 
-      body{
-        margin:0;
-        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-        background:
-          radial-gradient(1200px 800px at 10% -10%, rgba(0,229,168,.22), rgba(0,0,0,0) 55%),
-          radial-gradient(900px 700px at 90% 0%, rgba(0,179,255,.20), rgba(0,0,0,0) 50%),
-          radial-gradient(900px 700px at 70% 120%, rgba(0,229,168,.14), rgba(0,0,0,0) 55%),
-          linear-gradient(180deg, var(--bg0), var(--bg1));
-        color: var(--text);
-        min-height: 100vh;
-        overflow-x:hidden;
-      }
+      /* Core palette */
+      --bg-deep: #050709;
+      --bg-base: #0a0d14;
+      --bg-elevated: #0f1219;
+      --bg-surface: #141820;
+      --bg-hover: #1a1f2a;
 
-      body::before{
-        content:"";
-        position:fixed; inset:0;
-        pointer-events:none;
-        background:
-          radial-gradient(800px 450px at 40% 10%, rgba(255,255,255,.06), rgba(255,255,255,0) 70%),
-          radial-gradient(700px 420px at 80% 60%, rgba(255,255,255,.04), rgba(255,255,255,0) 70%);
-        opacity:.55;
-        mix-blend-mode: screen;
-      }
+      /* Glass surfaces */
+      --glass: rgba(255, 255, 255, 0.03);
+      --glass-hover: rgba(255, 255, 255, 0.06);
+      --glass-active: rgba(255, 255, 255, 0.08);
 
-      body::after{
-        content:"";
-        position:fixed; inset:0;
-        pointer-events:none;
-        background-image:
-          repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0, rgba(255,255,255,.035) 1px, rgba(255,255,255,0) 2px, rgba(255,255,255,0) 5px);
-        opacity:.035;
-        mix-blend-mode: overlay;
-      }
+      /* Borders */
+      --border: rgba(255, 255, 255, 0.08);
+      --border-subtle: rgba(255, 255, 255, 0.05);
+      --border-focus: rgba(0, 229, 168, 0.5);
 
-      a{ color: inherit; }
+      /* Text */
+      --text-primary: #f0f4ff;
+      --text-secondary: rgba(240, 244, 255, 0.72);
+      --text-muted: rgba(240, 244, 255, 0.48);
+      --text-disabled: rgba(240, 244, 255, 0.28);
 
-      header{
-        position: sticky; top:0; z-index: 10;
-        backdrop-filter: blur(14px);
-        background: linear-gradient(180deg, rgba(7,10,18,.78), rgba(7,10,18,.45));
-        border-bottom: 1px solid rgba(255,255,255,.08);
-      }
-      .topbar{
-        max-width: 1240px;
-        margin: 0 auto;
-        padding: 14px 18px;
-        display:flex; align-items:center; justify-content:space-between; gap:14px;
-      }
-      .brand{ display:flex; align-items:center; gap:12px; min-width:0; }
-      .logo{
-        width: 34px; height: 34px; border-radius: 12px;
-        background:
-          radial-gradient(12px 12px at 30% 30%, rgba(255,255,255,.35), rgba(255,255,255,0) 60%),
-          linear-gradient(135deg, rgba(0,229,168,.95), rgba(0,179,255,.95));
-        box-shadow: 0 18px 40px rgba(0,229,168,.18), 0 18px 40px rgba(0,179,255,.14);
-        border: 1px solid rgba(255,255,255,.18);
-        position:relative;
-      }
-      .logo::after{
-        content:"";
-        position:absolute; inset:-8px;
-        border-radius: 18px;
-        background: radial-gradient(circle at 40% 40%, rgba(0,229,168,.20), rgba(0,0,0,0) 60%);
-        filter: blur(2px);
-        opacity:.6;
-      }
-      .brand h1{
-        margin:0;
-        font-size: 14px;
-        letter-spacing: .3px;
-        text-transform: uppercase;
-      }
-      .subtitle{
-        margin-top: 2px;
-        font-size: 12px;
-        color: var(--muted);
-        white-space:nowrap;
-        overflow:hidden;
-        text-overflow: ellipsis;
-      }
+      /* Accent colors */
+      --accent: #00e5a8;
+      --accent-dim: rgba(0, 229, 168, 0.16);
+      --accent-glow: rgba(0, 229, 168, 0.35);
+      --accent-text: #00ffbd;
 
-      .right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
-      .pill{
-        display:inline-flex; align-items:center; gap:8px;
-        padding: 7px 10px;
-        border-radius: 999px;
-        border:1px solid rgba(255,255,255,.14);
-        background: rgba(255,255,255,.04);
-        box-shadow: var(--shadow2);
-        font-size: 12px;
-      }
-      .dot{ width: 7px; height:7px; border-radius:999px; background: rgba(255,255,255,.25); box-shadow: 0 0 0 4px rgba(255,255,255,.06); }
-      .dot.ok{ background: var(--accent); box-shadow: 0 0 0 4px rgba(0,229,168,.14); }
-      .dot.bad{ background: var(--danger); box-shadow: 0 0 0 4px rgba(255,91,110,.12); }
-      .dot.warn{ background: var(--warn); box-shadow: 0 0 0 4px rgba(255,204,0,.14); }
+      --cyan: #00c8ff;
+      --cyan-dim: rgba(0, 200, 255, 0.14);
+      --cyan-glow: rgba(0, 200, 255, 0.30);
 
-      button, input{
-        font: inherit;
-        color: var(--text);
-        border-radius: 14px;
-        border:1px solid rgba(255,255,255,.14);
-        background: rgba(255,255,255,.045);
-      }
-      button{
-        cursor:pointer;
-        padding: 10px 12px;
-        transition: transform .12s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease;
-      }
-      button:hover{ background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.20); }
-      button:active{ transform: translateY(1px); }
-      button:disabled{ opacity:.55; cursor:not-allowed; transform:none; }
+      --danger: #ff5b6e;
+      --danger-dim: rgba(255, 91, 110, 0.14);
+      --danger-glow: rgba(255, 91, 110, 0.30);
 
-      .btn-primary{
-        border-color: rgba(0,229,168,.45);
-        background: linear-gradient(135deg, rgba(0,229,168,.20), rgba(0,179,255,.14));
-        box-shadow: 0 18px 45px rgba(0,229,168,.10), 0 18px 45px rgba(0,179,255,.08);
-      }
-      .btn-primary:hover{ border-color: rgba(0,229,168,.68); background: linear-gradient(135deg, rgba(0,229,168,.26), rgba(0,179,255,.18)); }
-      .btn-danger{ border-color: rgba(255,91,110,.55); background: rgba(255,91,110,.10); }
-      .btn-ghost{ background: rgba(255,255,255,.03); }
-      .btn-chip{ padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,.03); }
-      .btn-chip:hover{ background: rgba(255,255,255,.08); }
+      --warn: #ffb340;
+      --warn-dim: rgba(255, 179, 64, 0.14);
 
-      input{
-        padding: 11px 12px;
+      /* Sizing */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --radius-full: 9999px;
+
+      /* Shadows */
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 16px 64px rgba(0, 0, 0, 0.5);
+      --shadow-glow: 0 0 40px var(--accent-glow);
+
+      /* Typography */
+      --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --mono-size: 13px;
+
+      /* Animation */
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-primary);
+      background: var(--bg-deep);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background gradients */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 1400px 900px at 5% -5%, rgba(0, 229, 168, 0.15), transparent 55%),
+        radial-gradient(ellipse 1000px 700px at 95% 5%, rgba(0, 200, 255, 0.12), transparent 50%),
+        radial-gradient(ellipse 800px 600px at 50% 120%, rgba(0, 229, 168, 0.08), transparent 50%);
+      z-index: 0;
+    }
+
+    /* Subtle noise texture */
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.015;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      z-index: 0;
+    }
+
+    a {
+      color: var(--accent-text);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    a:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       LAYOUT STRUCTURE
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    .app {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      background: linear-gradient(180deg, rgba(10, 13, 20, 0.92), rgba(10, 13, 20, 0.75));
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--accent), var(--cyan));
+      position: relative;
+      flex-shrink: 0;
+      box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+    .logo::before {
+      content: "";
+      position: absolute;
+      inset: 2px;
+      border-radius: calc(var(--radius-md) - 2px);
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3), transparent 60%);
+    }
+    .logo::after {
+      content: "F";
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--bg-deep);
+    }
+
+    .brand-text h1 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .brand-text .subtitle {
+      margin-top: 2px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Status indicator */
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .status-dot.ok {
+      background: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim), 0 0 12px var(--accent-glow);
+    }
+    .status-dot.warn {
+      background: var(--warn);
+      box-shadow: 0 0 0 3px var(--warn-dim);
+    }
+    .status-dot.bad {
+      background: var(--danger);
+      box-shadow: 0 0 0 3px var(--danger-dim);
+    }
+
+    /* Warning banner */
+    .warning-banner {
+      background: linear-gradient(90deg, rgba(255, 179, 64, 0.12), rgba(255, 179, 64, 0.06));
+      border-bottom: 1px solid rgba(255, 179, 64, 0.2);
+      padding: 10px 24px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--warn);
+    }
+    .warning-banner.visible {
+      display: flex;
+    }
+    .warning-banner svg {
+      flex-shrink: 0;
+    }
+
+    /* Navigation tabs */
+    .nav {
+      background: var(--bg-base);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 65px;
+      z-index: 90;
+    }
+    .nav-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      gap: 4px;
+    }
+    .nav-tab {
+      position: relative;
+      padding: 14px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .nav-tab:hover {
+      color: var(--text-primary);
+    }
+    .nav-tab.active {
+      color: var(--accent-text);
+    }
+    .nav-tab::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%) scaleX(0);
+      width: calc(100% - 24px);
+      height: 2px;
+      background: var(--accent);
+      border-radius: 1px 1px 0 0;
+      transition: transform 0.2s var(--ease-out);
+    }
+    .nav-tab.active::after {
+      transform: translateX(-50%) scaleX(1);
+    }
+    .nav-tab:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* Main content */
+    .main {
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .page {
+      display: none;
+    }
+    .page.active {
+      display: block;
+      animation: fadeIn 0.25s var(--ease-out);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       COMPONENTS
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    /* Buttons */
+    button {
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: all 0.15s var(--ease-out);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    button:hover:not(:disabled) {
+      background: var(--glass-hover);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+    button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, rgba(0, 229, 168, 0.2), rgba(0, 200, 255, 0.15));
+      border-color: rgba(0, 229, 168, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 229, 168, 0.15);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, rgba(0, 229, 168, 0.28), rgba(0, 200, 255, 0.2));
+      border-color: rgba(0, 229, 168, 0.55);
+      box-shadow: 0 4px 24px rgba(0, 229, 168, 0.2);
+    }
+
+    .btn-danger {
+      border-color: rgba(255, 91, 110, 0.4);
+      background: var(--danger-dim);
+    }
+    .btn-danger:hover:not(:disabled) {
+      border-color: rgba(255, 91, 110, 0.6);
+      background: rgba(255, 91, 110, 0.2);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: transparent;
+    }
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--glass);
+      border-color: var(--border);
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 13px;
+      border-radius: var(--radius-sm);
+    }
+
+    .btn-icon {
+      padding: 8px;
+      width: 36px;
+      height: 36px;
+    }
+
+    .btn-pill {
+      border-radius: var(--radius-full);
+      padding: 8px 14px;
+    }
+
+    /* Inputs */
+    input, textarea {
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text-primary);
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(0, 229, 168, 0.12);
+    }
+    input::placeholder, textarea::placeholder {
+      color: var(--text-muted);
+    }
+    input.mono, textarea.mono {
+      font-family: var(--font-mono);
+      font-size: var(--mono-size);
+    }
+
+    /* Cards */
+    .card {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 500px 300px at 10% 0%, rgba(0, 229, 168, 0.06), transparent 50%),
+        radial-gradient(ellipse 400px 250px at 90% 10%, rgba(0, 200, 255, 0.05), transparent 50%);
+      pointer-events: none;
+    }
+    .card > * {
+      position: relative;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+    }
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Status pills */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .pill.ok {
+      background: var(--accent-dim);
+      border-color: rgba(0, 229, 168, 0.3);
+      color: var(--accent-text);
+    }
+    .pill.warn {
+      background: var(--warn-dim);
+      border-color: rgba(255, 179, 64, 0.3);
+      color: var(--warn);
+    }
+    .pill.bad {
+      background: var(--danger-dim);
+      border-color: rgba(255, 91, 110, 0.3);
+      color: var(--danger);
+    }
+
+    /* Callouts */
+    .callout {
+      padding: 16px;
+      border-radius: var(--radius-lg);
+      border: 1px solid;
+    }
+    .callout.info {
+      background: var(--cyan-dim);
+      border-color: rgba(0, 200, 255, 0.25);
+    }
+    .callout.success {
+      background: var(--accent-dim);
+      border-color: rgba(0, 229, 168, 0.25);
+    }
+    .callout.warning {
+      background: var(--warn-dim);
+      border-color: rgba(255, 179, 64, 0.25);
+    }
+    .callout.error {
+      background: var(--danger-dim);
+      border-color: rgba(255, 91, 110, 0.25);
+    }
+
+    .callout-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .callout-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .callout-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .callout-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Code blocks */
+    .code-block {
+      position: relative;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      font-family: var(--font-mono);
+      font-size: var(--mono-size);
+      line-height: 1.4;
+      overflow-x: auto;
+    }
+    .code-block .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 6px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .code-block:hover .copy-btn {
+      opacity: 1;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .spinner.sm {
+      width: 12px;
+      height: 12px;
+      border-width: 1.5px;
+    }
+
+    /* Progress bar */
+    .progress {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--cyan));
+      border-radius: var(--radius-full);
+      transition: width 0.4s var(--ease-out);
+    }
+
+    /* Toast notifications */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: min(400px, calc(100vw - 48px));
+    }
+    .toast {
+      background: rgba(10, 13, 20, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      box-shadow: var(--shadow-lg);
+      animation: slideIn 0.3s var(--ease-spring);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .toast.leaving {
+      animation: slideOut 0.25s var(--ease-out) forwards;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(24px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideOut {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(24px); }
+    }
+    .toast-icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+    .toast-icon.success { color: var(--accent); }
+    .toast-icon.error { color: var(--danger); }
+    .toast-icon.info { color: var(--cyan); }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       DASHBOARD PAGE
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    .dashboard-grid {
+      display: grid;
+      gap: 20px;
+    }
+    @media (min-width: 1024px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .dashboard-grid .hero-card {
+        grid-column: 1 / -1;
+      }
+    }
+
+    /* Hero card */
+    .hero-card {
+      background: linear-gradient(135deg, rgba(0, 229, 168, 0.08), rgba(0, 200, 255, 0.05));
+      border-color: rgba(0, 229, 168, 0.15);
+      padding: 28px;
+    }
+    .hero-card::before {
+      background:
+        radial-gradient(ellipse 700px 400px at 0% 0%, rgba(0, 229, 168, 0.12), transparent 50%),
+        radial-gradient(ellipse 500px 300px at 100% 100%, rgba(0, 200, 255, 0.08), transparent 50%);
+    }
+
+    .hero-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .hero-title {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin: 0 0 8px;
+    }
+    .hero-subtitle {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .hero-status {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    .hero-status-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      font-weight: 500;
+    }
+    .hero-status-badge .status-dot {
+      width: 10px;
+      height: 10px;
+    }
+
+    /* Info grid in hero */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .info-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .info-value {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* Next action card */
+    .next-action-card {
+      background: linear-gradient(135deg, rgba(0, 200, 255, 0.08), rgba(0, 229, 168, 0.05));
+      border-color: rgba(0, 200, 255, 0.2);
+    }
+    .next-action-card .card-header {
+      margin-bottom: 12px;
+    }
+    .next-action-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin: 0;
+    }
+    .next-action-content {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .next-action-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .next-action-icon svg {
+      width: 24px;
+      height: 24px;
+      color: var(--cyan);
+    }
+    .next-action-text h3 {
+      margin: 0 0 4px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .next-action-text p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .next-action-btn {
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    /* Setup timeline */
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .timeline-step {
+      display: flex;
+      gap: 16px;
+      padding: 16px 0;
+      position: relative;
+    }
+    .timeline-step:not(:last-child)::before {
+      content: "";
+      position: absolute;
+      left: 15px;
+      top: 48px;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+    .timeline-step.complete:not(:last-child)::before {
+      background: var(--accent);
+    }
+
+    .timeline-marker {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--bg-surface);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      transition: all 0.3s;
+    }
+    .timeline-step.active .timeline-marker {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-dim);
+    }
+    .timeline-step.complete .timeline-marker {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--bg-deep);
+    }
+
+    .timeline-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .timeline-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    .timeline-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .timeline-status {
+      margin-top: 8px;
+    }
+
+    /* Quick actions */
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    /* Device login callout */
+    .device-callout {
+      margin-top: 16px;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(0, 229, 168, 0.12), rgba(0, 200, 255, 0.08));
+      border: 1px solid rgba(0, 229, 168, 0.3);
+      border-radius: var(--radius-lg);
+      display: none;
+    }
+    .device-callout.visible {
+      display: block;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0, 229, 168, 0.2); }
+      50% { box-shadow: 0 0 0 8px rgba(0, 229, 168, 0); }
+    }
+
+    .device-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .device-header svg {
+      width: 24px;
+      height: 24px;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .device-header h4 {
+      margin: 0;
+      font-size: 15px;
+    }
+    .device-header p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .device-fields {
+      display: grid;
+      gap: 16px;
+    }
+    @media (min-width: 640px) {
+      .device-fields {
+        grid-template-columns: 1fr auto;
+      }
+    }
+    .device-field label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .device-field .code-block {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+    }
+    .device-field .value {
+      font-size: 15px;
+      word-break: break-all;
+    }
+    .device-code .value {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: var(--accent-text);
+    }
+
+    .device-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       LOGS PAGE
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    .logs-page .card {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .logs-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 20px;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-wrap: wrap;
+    }
+
+    .logs-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logs-toolbar-left h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .logs-toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .logs-filter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 200px;
+      max-width: 400px;
+      padding: 12px 20px;
+      background: rgba(0, 0, 0, 0.15);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .logs-filter svg {
+      width: 16px;
+      height: 16px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .logs-filter input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 0;
+      font-size: 13px;
+    }
+    .logs-filter input:focus {
+      box-shadow: none;
+    }
+
+    .logs-viewer {
+      height: calc(100vh - 320px);
+      min-height: 400px;
+      max-height: 800px;
+      overflow: auto;
+      padding: 16px 20px;
+      font-family: var(--font-mono);
+      font-size: var(--mono-size);
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      background: rgba(0, 0, 0, 0.3);
+    }
+    body.logs-nowrap .logs-viewer {
+      white-space: pre;
+      word-wrap: normal;
+    }
+
+    .logs-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 300px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .logs-empty svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+    .logs-empty p {
+      margin: 0;
+    }
+
+    /* Pinned device login in logs */
+    .logs-device-pin {
+      display: none;
+      padding: 14px 20px;
+      background: linear-gradient(90deg, rgba(0, 229, 168, 0.1), rgba(0, 200, 255, 0.05));
+      border-bottom: 1px solid rgba(0, 229, 168, 0.2);
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .logs-device-pin.visible {
+      display: flex;
+    }
+    .logs-device-pin svg {
+      width: 18px;
+      height: 18px;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .logs-device-pin span {
+      font-size: 13px;
+    }
+    .logs-device-pin strong {
+      font-family: var(--font-mono);
+      color: var(--accent-text);
+    }
+    .logs-device-pin .btns {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Logs toolbar button group */
+    .btn-group {
+      display: flex;
+      gap: 0;
+    }
+    .btn-group button {
+      border-radius: 0;
+      margin-left: -1px;
+    }
+    .btn-group button:first-child {
+      border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+      margin-left: 0;
+    }
+    .btn-group button:last-child {
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+    .btn-group button.active {
+      background: var(--accent-dim);
+      border-color: rgba(0, 229, 168, 0.3);
+      color: var(--accent-text);
+    }
+
+    /* Font size indicator */
+    .font-size-display {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      min-width: 28px;
+      text-align: center;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       CONSOLE PAGE
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    .console-grid {
+      display: grid;
+      gap: 20px;
+    }
+    @media (min-width: 768px) {
+      .console-grid {
+        grid-template-columns: 1fr 320px;
+      }
+    }
+
+    .console-input-area {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .console-input-area input {
+      flex: 1;
+    }
+
+    .console-info {
+      padding: 12px 16px;
+      background: rgba(0, 200, 255, 0.06);
+      border: 1px solid rgba(0, 200, 255, 0.15);
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+    .console-info svg {
+      display: inline;
+      vertical-align: middle;
+      margin-right: 6px;
+      width: 14px;
+      height: 14px;
+      color: var(--cyan);
+    }
+
+    .last-command {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .last-command code {
+      color: var(--text-primary);
+    }
+
+    /* Command presets */
+    .preset-section {
+      margin-bottom: 20px;
+    }
+    .preset-section h4 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin: 0 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .preset-section h4::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border-subtle);
+    }
+
+    .preset-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .preset-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      text-align: left;
+      width: 100%;
+    }
+    .preset-btn .preset-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--glass);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .preset-btn .preset-icon svg {
+      width: 16px;
+      height: 16px;
+      color: var(--text-secondary);
+    }
+    .preset-btn .preset-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .preset-btn .preset-name {
+      font-weight: 500;
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+    .preset-btn .preset-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .preset-btn .preset-cmd {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      background: rgba(0, 0, 0, 0.3);
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+    }
+
+    .preset-btn.danger .preset-icon {
+      border-color: rgba(255, 91, 110, 0.2);
+    }
+    .preset-btn.danger .preset-icon svg {
+      color: var(--danger);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       FILES PAGE
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    .files-grid {
+      display: grid;
+      gap: 20px;
+    }
+    @media (min-width: 768px) {
+      .files-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .files-info {
+      padding: 14px 16px;
+      background: rgba(0, 200, 255, 0.06);
+      border: 1px solid rgba(0, 200, 255, 0.15);
+      border-radius: var(--radius-md);
+      margin-bottom: 16px;
+    }
+    .files-info h4 {
+      margin: 0 0 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .files-info p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+      min-height: 60px;
+    }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+    .file-item .file-icon {
+      width: 32px;
+      height: 32px;
+      background: rgba(0, 200, 255, 0.1);
+      border: 1px solid rgba(0, 200, 255, 0.2);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .file-item .file-icon svg {
+      width: 16px;
+      height: 16px;
+      color: var(--cyan);
+    }
+    .file-item .file-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .file-item .file-name {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-item .file-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .file-item .file-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .file-empty {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-muted);
+    }
+    .file-empty svg {
+      width: 40px;
+      height: 40px;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+    .file-empty p {
+      margin: 0;
+      font-size: 13px;
+    }
+
+    .file-upload {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .file-upload-area {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .file-upload-area:hover {
+      border-color: var(--border-focus);
+      background: var(--glass);
+    }
+    .file-upload-area.dragover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .file-upload-area input {
+      display: none;
+    }
+    .file-upload-area svg {
+      width: 32px;
+      height: 32px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .file-upload-area p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .file-upload-area span {
+      color: var(--accent-text);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       RESPONSIVE ADJUSTMENTS
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    @media (max-width: 768px) {
+      .header-inner {
+        padding: 10px 16px;
+      }
+      .brand-text .subtitle {
+        display: none;
+      }
+      .main {
+        padding: 16px;
+      }
+      .nav-inner {
+        padding: 0 16px;
+        overflow-x: auto;
+      }
+      .nav-tab {
+        padding: 12px 14px;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .hero-card {
+        padding: 20px;
+      }
+      .hero-title {
+        font-size: 20px;
+      }
+      .logs-toolbar {
+        padding: 12px 16px;
+      }
+      .logs-viewer {
+        height: calc(100vh - 360px);
+        padding: 14px 16px;
+      }
+      .logs-filter {
+        padding: 10px 16px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hero-top {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .hero-status {
+        align-items: flex-start;
+      }
+      .next-action-content {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .next-action-btn {
+        margin-left: 0;
         width: 100%;
-        outline:none;
       }
-      input:focus{ border-color: rgba(0,179,255,.55); box-shadow: 0 0 0 4px rgba(0,179,255,.12); }
+      .logs-toolbar-right {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Warning Banner -->
+    <div class="warning-banner" id="warningBanner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span id="warningText">This panel is publicly accessible. Ensure you have a strong password set.</span>
+    </div>
 
-      code{
-        background: rgba(255,255,255,.06);
-        border:1px solid rgba(255,255,255,.12);
-        padding: 2px 8px;
-        border-radius: 999px;
-        font-size: 12px;
-      }
-
-      .wrap{ max-width: 1240px; margin: 0 auto; padding: 18px 18px 56px; }
-      .grid{ display:grid; gap: 14px; }
-      @media (min-width: 980px){
-        .grid.cols-2{ grid-template-columns: .78fr 1.22fr; align-items:start; }
-      }
-
-      .card{
-        background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-        border: 1px solid rgba(255,255,255,.10);
-        border-radius: var(--r);
-        padding: 14px;
-        box-shadow: var(--shadow2);
-        position:relative;
-        overflow:hidden;
-      }
-      .card::before{
-        content:"";
-        position:absolute; inset:-1px;
-        background:
-          radial-gradient(600px 300px at 20% 0%, rgba(0,229,168,.10), rgba(0,0,0,0) 55%),
-          radial-gradient(520px 280px at 90% 20%, rgba(0,179,255,.09), rgba(0,0,0,0) 55%);
-        opacity:.7;
-        pointer-events:none;
-      }
-      .card > *{ position:relative; }
-
-      .row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-      .space{ justify-content: space-between; }
-      .muted{ color: var(--muted); }
-      .muted2{ color: var(--muted2); }
-      .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: var(--monoSize); line-height: 1.35; }
-
-      .hero h2{ margin:0; font-size: 22px; letter-spacing: -.2px; }
-      .hero p{ margin: 6px 0 0; color: var(--muted); line-height: 1.4; }
-
-      .stepper{ display:grid; gap:10px; margin-top: 12px; }
-      .step{
-        border:1px solid rgba(255,255,255,.10);
-        border-radius: 16px;
-        background: rgba(0,0,0,.18);
-        padding: 12px;
-      }
-      .step-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
-      .step-title{ display:flex; align-items:center; gap:10px; min-width:0; }
-      .num{
-        width: 26px; height: 26px; border-radius: 10px;
-        display:grid; place-items:center;
-        background: rgba(255,255,255,.06);
-        border: 1px solid rgba(255,255,255,.12);
-        font-size: 12px;
-        color: var(--muted);
-      }
-      .state{
-        display:inline-flex; align-items:center; gap:8px;
-        padding: 6px 10px;
-        border-radius: 999px;
-        border: 1px solid rgba(255,255,255,.14);
-        background: rgba(255,255,255,.03);
-        font-size: 12px;
-      }
-      .spinner{
-        width: 12px; height:12px; border-radius:999px;
-        border: 2px solid rgba(255,255,255,.18);
-        border-top-color: rgba(0,229,168,.75);
-        animation: spin 1s linear infinite;
-      }
-      @keyframes spin{ to{ transform: rotate(360deg); } }
-
-      .callout{
-        border: 1px solid rgba(0,229,168,.32);
-        background: linear-gradient(135deg, rgba(0,229,168,.10), rgba(0,179,255,.06));
-        border-radius: 16px;
-        padding: 12px;
-        margin-top: 10px;
-      }
-      .kvs{ display:grid; grid-template-columns: 130px 1fr; gap: 8px 12px; margin-top: 10px; }
-      .kvs .k{ color: var(--muted2); }
-
-      pre{
-        margin:0;
-        background: rgba(0,0,0,.34);
-        border: 1px solid rgba(255,255,255,.10);
-        border-radius: var(--r);
-        padding: 14px;
-        overflow: auto;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
-        white-space: pre-wrap;
-        overflow-wrap: anywhere;
-      }
-      body.nowrap pre{ white-space: pre; overflow-wrap: normal; }
-
-      .logbox{ height: calc(100vh - 240px); min-height: 380px; }
-      @media (max-width: 979px){
-        .logbox{ height: 52vh; min-height: 320px; }
-      }
-
-      .toast{
-        position: fixed;
-        right: 18px; bottom: 18px;
-        max-width: min(560px, calc(100vw - 36px));
-        display:flex; flex-direction:column; gap:10px;
-        z-index: 50;
-      }
-      .toast .item{
-        background: rgba(7,10,18,.78);
-        border: 1px solid rgba(255,255,255,.14);
-        border-radius: 16px;
-        padding: 12px;
-        box-shadow: var(--shadow);
-        backdrop-filter: blur(16px);
-      }
-
-      .filegrid{ display:grid; gap:10px; }
-      @media (min-width: 980px){ .filegrid{ grid-template-columns: 1fr 1fr; } }
-      .filelist div{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding: 8px 10px; border-radius: 14px; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.03); }
-      .filelist div code{ border-radius: 10px; }
-    </style>
-  </head>
-  <body>
-    <header>
-      <div class="topbar">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-inner">
         <div class="brand">
           <div class="logo" aria-hidden="true"></div>
-          <div style="min-width:0;">
-            <h1>Flux Game Server Panel · Hytale</h1>
-            <div class="subtitle">Designed for RunOnFlux (g:/ persistence-friendly) · keep this panel password-protected</div>
+          <div class="brand-text">
+            <h1>Flux Game Server Panel</h1>
+            <div class="subtitle">Hytale Server - RunOnFlux Deployment</div>
           </div>
         </div>
-        <div class="right">
-          <span class="pill" title="Server health from PID + basic checks"><span id="healthDot" class="dot"></span><span id="healthText">Connecting…</span></span>
-          <button id="refreshAllBtn" class="btn-ghost" type="button">Refresh</button>
+        <div class="header-right">
+          <div class="status-badge">
+            <span class="status-dot" id="headerStatusDot"></span>
+            <span id="headerStatusText">Connecting...</span>
+          </div>
+          <button class="btn-ghost btn-icon" id="refreshAllBtn" title="Refresh all data">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
         </div>
       </div>
     </header>
 
-    <div class="wrap">
-      <div class="grid cols-2">
-        <section class="card">
-          <div class="hero">
-            <div style="flex:1; min-width:0;">
-              <h2>Guided setup</h2>
-              <p>Click <b>Begin setup</b>, approve the device login once, and the server will download + start. Saves and auth state live in <span class="mono">/data</span> for Flux-friendly persistence.</p>
+    <!-- Navigation -->
+    <nav class="nav">
+      <div class="nav-inner">
+        <button class="nav-tab active" data-page="dashboard">Dashboard</button>
+        <button class="nav-tab" data-page="logs">Live Logs</button>
+        <button class="nav-tab" data-page="console">Console</button>
+        <button class="nav-tab" data-page="files">Files</button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Dashboard Page -->
+      <div class="page active" id="page-dashboard">
+        <div class="dashboard-grid">
+          <!-- Hero Status Card -->
+          <div class="card hero-card">
+            <div class="hero-top">
+              <div>
+                <h2 class="hero-title">Hytale Dedicated Server</h2>
+                <p class="hero-subtitle">Flux-deployed game server with persistent storage</p>
+              </div>
+              <div class="hero-status">
+                <div class="hero-status-badge">
+                  <span class="status-dot" id="heroStatusDot"></span>
+                  <span id="heroStatusText">Checking...</span>
+                </div>
+                <span class="pill" id="envBadge">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  RunOnFlux
+                </span>
+              </div>
+            </div>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">Bind Address</span>
+                <span class="info-value" id="bindValue">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Auth Mode</span>
+                <span class="info-value" id="authModeValue">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Version</span>
+                <span class="info-value" id="versionValue">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Server Files</span>
+                <span class="info-value" id="filesValue">-</span>
+              </div>
             </div>
           </div>
 
-          <div class="stepper">
-            <div class="step">
-              <div class="step-head">
-                <div class="step-title"><span class="num">1</span><div><b>Begin setup</b><div class="muted2" style="font-size:12px; margin-top:2px;">Auth + download (first run), then boots automatically</div></div></div>
-                <div class="state"><span class="spinner" id="setupSpin" style="display:none;"></span><span id="setupStateText">…</span></div>
+          <!-- Next Action Card -->
+          <div class="card next-action-card">
+            <div class="card-header">
+              <h3 class="next-action-title">What to do next</h3>
+            </div>
+            <div class="next-action-content" id="nextActionContent">
+              <div class="next-action-icon" id="nextActionIcon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               </div>
-              <div class="row" style="margin-top:10px;">
-                <button id="beginBtn" class="btn-primary" type="button">Begin setup</button>
-                <button id="downloadOnlyBtn" class="btn-ghost" type="button" title="Download server files (reuses your persisted /data auth when available)">Download only</button>
-                <button id="authOnlyBtn" class="btn-ghost" type="button" title="Authenticate (device login) without downloading">Auth only</button>
-                <button id="resetAuthBtn" class="btn-danger" type="button" title="Clears /data/auth/state.json">Reset auth</button>
+              <div class="next-action-text">
+                <h3 id="nextActionTitle">Checking status...</h3>
+                <p id="nextActionDesc">Please wait while we determine the server state.</p>
               </div>
-              <div class="muted2" id="setupHint" style="margin-top:10px; font-size:12px;"></div>
+              <button class="btn-primary next-action-btn" id="nextActionBtn" style="display:none;">Action</button>
+            </div>
 
-              <div id="deviceCallout" class="callout" style="display:none;">
-                <div class="row space">
-                  <div>
-                    <div style="font-size:13px; letter-spacing:.2px;">Device login required</div>
-                    <div class="muted" style="margin-top:4px; line-height:1.35;">
-                      Open the URL, approve, then come back here. This should be a one-time setup per persistent <span class="mono">/data</span>.
-                    </div>
-                  </div>
-                  <div class="row">
-                    <button id="copyUrlBtn" class="btn-chip" type="button">Copy URL</button>
-                    <button id="copyCodeBtn" class="btn-chip" type="button">Copy code</button>
+            <!-- Device Login Callout -->
+            <div class="device-callout" id="deviceCallout">
+              <div class="device-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                <div>
+                  <h4>Device Login Required</h4>
+                  <p>Open the URL below and enter the code to authenticate. This is typically a one-time step.</p>
+                </div>
+              </div>
+              <div class="device-fields">
+                <div class="device-field device-url">
+                  <label>Login URL</label>
+                  <div class="code-block">
+                    <span class="value" id="deviceUrl">-</span>
+                    <button class="btn-ghost btn-sm copy-btn" id="copyUrlBtn" title="Copy URL">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
                   </div>
                 </div>
-                <div class="row" style="margin-top:10px;">
-                  <div style="flex: 1; min-width:0;">
-                    <div class="muted2" style="font-size:12px;">URL</div>
-                    <div class="mono" style="margin-top:4px; word-break: break-all;">
-                      <a id="deviceUrl" href="#" target="_blank" rel="noreferrer">—</a>
-                    </div>
-                  </div>
-                  <div style="min-width: 220px;">
-                    <div class="muted2" style="font-size:12px;">Code</div>
-                    <div class="mono" id="deviceCode" style="margin-top:4px;">—</div>
+                <div class="device-field device-code">
+                  <label>Your Code</label>
+                  <div class="code-block">
+                    <span class="value" id="deviceCode">-</span>
+                    <button class="btn-ghost btn-sm copy-btn" id="copyCodeBtn" title="Copy code">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
                   </div>
                 </div>
-                <div class="muted2" style="margin-top:10px; font-size:12px;">Source: <span id="deviceSource" class="mono"></span></div>
+              </div>
+              <div class="device-actions">
+                <a href="#" id="deviceOpenLink" target="_blank" rel="noopener noreferrer">
+                  <button class="btn-primary" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    Open Login Page
+                  </button>
+                </a>
+                <button class="btn-ghost" id="deviceRefreshBtn" type="button">I've completed login - check status</button>
               </div>
             </div>
+          </div>
 
-            <div class="step">
-              <div class="step-head">
-                <div class="step-title"><span class="num">2</span><div><b>Server online</b><div class="muted2" style="font-size:12px; margin-top:2px;">Bind + version</div></div></div>
-                <div class="state"><span class="spinner" id="runSpin" style="display:none;"></span><span id="runStateText">…</span></div>
-              </div>
-              <div class="kvs">
-                <div class="k">Bind</div><div><code id="bindVal"></code></div>
-                <div class="k">Auth mode</div><div><code id="authModeVal"></code></div>
-                <div class="k">Version</div><div><code id="versionVal"></code></div>
-              </div>
-              <div class="row" style="margin-top:10px;">
-                <span id="statusLine" class="muted" style="font-size:12px;"></span>
+          <!-- Setup Progress Card -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Setup Progress</h3>
+                <p class="card-subtitle">Track your server's initialization steps</p>
               </div>
             </div>
-
-            <div class="step">
-              <div class="step-head">
-                <div class="step-title"><span class="num">3</span><div><b>Quick actions</b><div class="muted2" style="font-size:12px; margin-top:2px;">Queues console commands (Flux-safe)</div></div></div>
-              </div>
-              <div id="presetRow" class="row" style="margin-top:10px;"></div>
-              <div class="row" style="margin-top:12px;">
-                <div style="flex:1; min-width: 260px;">
-                  <input id="cmdInput" class="mono" placeholder="/help" autocomplete="off" />
+            <div class="timeline">
+              <div class="timeline-step" id="step1">
+                <div class="timeline-marker">1</div>
+                <div class="timeline-content">
+                  <div class="timeline-title">Authenticate</div>
+                  <div class="timeline-desc">Device login to enable online play (one-time per /data volume)</div>
+                  <div class="timeline-status" id="step1Status"></div>
                 </div>
-                <button id="sendBtn" class="btn-primary" type="button">Send</button>
-                <button id="clearConsoleBtn" class="btn-ghost" type="button">Clear queue</button>
               </div>
-              <div id="cmdResult" class="muted2" style="margin-top:10px; font-size:12px;"></div>
+              <div class="timeline-step" id="step2">
+                <div class="timeline-marker">2</div>
+                <div class="timeline-content">
+                  <div class="timeline-title">Download Server Files</div>
+                  <div class="timeline-desc">Fetch the Hytale dedicated server package</div>
+                  <div class="timeline-status" id="step2Status"></div>
+                </div>
+              </div>
+              <div class="timeline-step" id="step3">
+                <div class="timeline-marker">3</div>
+                <div class="timeline-content">
+                  <div class="timeline-title">Boot Server</div>
+                  <div class="timeline-desc">Start the Hytale server process</div>
+                  <div class="timeline-status" id="step3Status"></div>
+                </div>
+              </div>
+              <div class="timeline-step" id="step4">
+                <div class="timeline-marker">4</div>
+                <div class="timeline-content">
+                  <div class="timeline-title">Ready to Play</div>
+                  <div class="timeline-desc">Connect using the bind address shown above</div>
+                  <div class="timeline-status" id="step4Status"></div>
+                </div>
+              </div>
+            </div>
+            <div class="quick-actions">
+              <button class="btn-primary" id="beginSetupBtn" type="button">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Begin Setup
+              </button>
+              <button class="btn-ghost" id="downloadOnlyBtn" type="button" title="Download server files (uses existing auth if available)">Download Only</button>
+              <button class="btn-ghost" id="authOnlyBtn" type="button" title="Run device authentication without downloading">Auth Only</button>
+              <button class="btn-danger btn-sm" id="resetAuthBtn" type="button" title="Clear /data/auth/state.json">Reset Auth</button>
             </div>
           </div>
-        </section>
 
-        <section class="card">
-          <div class="row space">
-            <div>
-              <div style="letter-spacing:.2px;">Live logs</div>
-              <div class="muted2" style="margin-top:4px; font-size:12px;">Auto-updates. ANSI is stripped for readability.</div>
+          <!-- Quick Info Card -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">About Flux Deployment</h3>
+                <p class="card-subtitle">Important information for your server</p>
+              </div>
             </div>
-            <div class="row">
-              <button id="fontDownBtn" class="btn-chip" type="button" title="Smaller log font">A−</button>
-              <button id="fontUpBtn" class="btn-chip" type="button" title="Larger log font">A+</button>
-              <button id="wrapBtn" class="btn-chip" type="button">Wrap: on</button>
-              <button id="autoBtn" class="btn-chip" type="button">Auto-scroll: on</button>
-              <button id="log400" class="btn-chip" type="button">400</button>
-              <button id="log1200" class="btn-chip" type="button">1200</button>
-              <button id="log6000" class="btn-chip" type="button">6000</button>
+            <div class="callout info" style="margin-bottom:12px;">
+              <div class="callout-header">
+                <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                <div>
+                  <div class="callout-title">Persistent Storage (g:/ mode)</div>
+                </div>
+              </div>
+              <p class="callout-text">Your /data directory persists across container restarts. This includes auth tokens, server files, and world saves. On g:/ deployments, data syncs across Flux nodes.</p>
+            </div>
+            <div class="callout warning">
+              <div class="callout-header">
+                <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <div>
+                  <div class="callout-title">Panel Security</div>
+                </div>
+              </div>
+              <p class="callout-text">This panel is accessible via your app URL. Ensure you've configured a strong HYTALE_PANEL_PASSWORD in your Flux app environment variables.</p>
             </div>
           </div>
-          <div class="row" style="margin-top:10px;">
-            <input id="logFilter" placeholder="Filter (e.g. oauth, error, auth, download)" />
-            <button id="copyLogsBtn" class="btn-ghost" type="button">Copy logs</button>
-          </div>
-          <pre id="logBox" class="mono logbox" style="margin-top:12px;"></pre>
-        </section>
+        </div>
       </div>
 
-      <section class="card" style="margin-top:14px;">
-        <div class="row space">
-          <div>
-            <div style="letter-spacing:.2px;">Mods / Plugins (experimental)</div>
-            <div class="muted2" style="margin-top:4px; font-size:12px;">Lightweight file management designed to avoid Flux volume-browser pain.</div>
+      <!-- Logs Page -->
+      <div class="page" id="page-logs">
+        <div class="card logs-page">
+          <div class="logs-toolbar">
+            <div class="logs-toolbar-left">
+              <h3>Live Logs</h3>
+              <span class="pill" id="logLinesPill">400 lines</span>
+            </div>
+            <div class="logs-toolbar-right">
+              <div class="btn-group">
+                <button class="btn-sm" id="fontDownBtn" type="button" title="Decrease font size">A-</button>
+                <span class="font-size-display" id="fontSizeDisplay">13</span>
+                <button class="btn-sm" id="fontUpBtn" type="button" title="Increase font size">A+</button>
+              </div>
+              <button class="btn-sm" id="wrapToggle" type="button">Wrap: On</button>
+              <button class="btn-sm" id="autoScrollToggle" type="button">Auto-scroll: On</button>
+              <div class="btn-group" id="linesButtonGroup">
+                <button class="btn-sm active" data-lines="400" type="button">400</button>
+                <button class="btn-sm" data-lines="1200" type="button">1.2K</button>
+                <button class="btn-sm" data-lines="6000" type="button">6K</button>
+              </div>
+              <button class="btn-ghost btn-sm" id="copyLogsBtn" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                Copy
+              </button>
+              <button class="btn-ghost btn-sm" id="downloadLogsBtn" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download
+              </button>
+            </div>
           </div>
-          <button id="modsRefreshBtn" class="btn-ghost" type="button">Refresh</button>
+
+          <!-- Pinned device login (visible when auth needed) -->
+          <div class="logs-device-pin" id="logsDevicePin">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            <span>Device login required: <strong id="logsDeviceCode">-</strong></span>
+            <span>URL: <a href="#" id="logsDeviceUrl" target="_blank" rel="noopener noreferrer">-</a></span>
+            <div class="btns">
+              <button class="btn-sm" id="logsDeviceCopyUrl" type="button">Copy URL</button>
+              <button class="btn-sm" id="logsDeviceCopyCode" type="button">Copy Code</button>
+            </div>
+          </div>
+
+          <div class="logs-filter">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="logFilterInput" placeholder="Filter logs (e.g., error, auth, download)..." />
+            <button class="btn-ghost btn-sm" id="clearFilterBtn" type="button" style="display:none;">Clear</button>
+          </div>
+
+          <pre class="logs-viewer" id="logsViewer"></pre>
         </div>
-        <div class="filegrid" style="margin-top:12px;">
+      </div>
+
+      <!-- Console Page -->
+      <div class="page" id="page-console">
+        <div class="console-grid">
           <div class="card">
-            <div class="muted2" style="font-size:12px;">Mods directory: <span class="mono">/data/Server/mods</span></div>
-            <div id="modsList" class="filelist" style="margin-top:10px;"></div>
-            <form id="modsUploadForm" style="margin-top:10px;">
-              <input type="file" id="modsFile" />
-              <button type="submit" class="btn-primary" style="margin-top:10px; width:100%;">Upload to mods</button>
-            </form>
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Send Command</h3>
+                <p class="card-subtitle">Execute server commands</p>
+              </div>
+            </div>
+            <div class="console-info">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              Commands are queued and executed by the server. Output appears in the Live Logs tab.
+            </div>
+            <div class="console-input-area">
+              <input type="text" id="cmdInput" class="mono" placeholder="/help" autocomplete="off" />
+              <button class="btn-primary" id="sendCmdBtn" type="button">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Send
+              </button>
+            </div>
+            <div class="last-command" id="lastCommandDisplay"></div>
+            <div style="margin-top:16px;">
+              <button class="btn-ghost btn-sm" id="clearQueueBtn" type="button">Clear Command Queue</button>
+            </div>
           </div>
+
           <div class="card">
-            <div class="muted2" style="font-size:12px;">Plugins directory: <span class="mono">/data/Server/plugins</span></div>
-            <div id="pluginsList" class="filelist" style="margin-top:10px;"></div>
-            <form id="pluginsUploadForm" style="margin-top:10px;">
-              <input type="file" id="pluginsFile" />
-              <button type="submit" class="btn-primary" style="margin-top:10px; width:100%;">Upload to plugins</button>
-            </form>
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Command Presets</h3>
+                <p class="card-subtitle">Quick access to common commands</p>
+              </div>
+            </div>
+
+            <div class="preset-section">
+              <h4>Safe Commands</h4>
+              <div class="preset-grid" id="safePresets"></div>
+            </div>
+
+            <div class="preset-section">
+              <h4>Authentication</h4>
+              <div class="preset-grid" id="authPresets"></div>
+            </div>
+
+            <div class="preset-section">
+              <h4>Advanced</h4>
+              <div class="preset-grid" id="advancedPresets"></div>
+            </div>
           </div>
         </div>
-      </section>
-    </div>
+      </div>
 
-    <div class="toast" id="toast"></div>
+      <!-- Files Page -->
+      <div class="page" id="page-files">
+        <div class="files-info">
+          <h4>Flux Volume Browser Alternative</h4>
+          <p>This lightweight file manager handles mods and plugins without the complexity of the full volume browser. Files are stored in /data/Server/ and persist across restarts.</p>
+        </div>
 
-    <script>
-      let logLines = 400;
-      let lastStatus = null;
-      let logCache = "";
-      let wrapEnabled = true;
-      let autoScrollEnabled = true;
-      let monoSize = 13;
+        <div class="files-grid">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Mods</h3>
+                <p class="card-subtitle">/data/Server/mods</p>
+              </div>
+              <button class="btn-ghost btn-sm" id="refreshModsBtn" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                Refresh
+              </button>
+            </div>
+            <div class="file-list" id="modsList"></div>
+            <div class="file-upload">
+              <div class="file-upload-area" id="modsUploadArea">
+                <input type="file" id="modsFileInput" />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <p>Drop a file here or <span>browse</span></p>
+              </div>
+            </div>
+          </div>
 
-      const presets = [
-        { label: "Help", command: "/help" },
-        { label: "List players", command: "/list" },
-        { label: "Auth: link server", command: "/auth login device", confirm: "Start device auth on the server?" },
-        { label: "Auth: status", command: "/auth status" },
-      ];
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Plugins</h3>
+                <p class="card-subtitle">/data/Server/plugins</p>
+              </div>
+              <button class="btn-ghost btn-sm" id="refreshPluginsBtn" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                Refresh
+              </button>
+            </div>
+            <div class="file-list" id="pluginsList"></div>
+            <div class="file-upload">
+              <div class="file-upload-area" id="pluginsUploadArea">
+                <input type="file" id="pluginsFileInput" />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <p>Drop a file here or <span>browse</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
 
-      function el(id){ return document.getElementById(id); }
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
 
-      function toast(msg){
-        const box = el("toast");
-        const item = document.createElement("div");
-        item.className = "item";
-        item.textContent = msg;
-        box.appendChild(item);
-        setTimeout(() => { item.style.opacity = "0"; item.style.transition = "opacity .25s ease"; }, 3200);
-        setTimeout(() => { try { box.removeChild(item); } catch(e){} }, 3600);
+  <script>
+    // ═══════════════════════════════════════════════════════════════════════
+    // FLUX GAME SERVER PANEL - JAVASCRIPT
+    // Security note: All user-controlled content is escaped via escapeHtml()
+    // before being rendered. Static UI templates use safe DOM construction.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const state = {
+      status: null,
+      logCache: "",
+      logLines: 400,
+      wrapEnabled: true,
+      autoScrollEnabled: true,
+      monoSize: 13,
+      lastCommand: null,
+      currentPage: "dashboard"
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // UTILITIES
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = String(str || "");
+      return div.innerHTML;
+    }
+
+    function formatBytes(bytes) {
+      if (bytes === 0) return "0 B";
+      const k = 1024;
+      const sizes = ["B", "KB", "MB", "GB"];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(
+        () => toast("Copied to clipboard", "success"),
+        () => toast("Failed to copy", "error")
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TOAST NOTIFICATIONS (Safe DOM construction)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function toast(message, type) {
+      type = type || "info";
+      const container = $("#toastContainer");
+      const el = document.createElement("div");
+      el.className = "toast";
+
+      const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      icon.setAttribute("class", "toast-icon " + type);
+      icon.setAttribute("viewBox", "0 0 24 24");
+      icon.setAttribute("fill", "none");
+      icon.setAttribute("stroke", "currentColor");
+      icon.setAttribute("stroke-width", "2");
+
+      if (type === "success") {
+        icon.innerHTML = '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>';
+      } else if (type === "error") {
+        icon.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>';
+      } else {
+        icon.innerHTML = '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>';
       }
 
-      function escapeHtml(s){
-        return String(s || "")
-          .replaceAll("&","&amp;")
-          .replaceAll("<","&lt;")
-          .replaceAll(">","&gt;")
-          .replaceAll("\"","&quot;")
-          .replaceAll("'","&#039;");
+      const span = document.createElement("span");
+      span.textContent = message;
+
+      el.appendChild(icon);
+      el.appendChild(span);
+      container.appendChild(el);
+
+      setTimeout(function() { el.classList.add("leaving"); }, 3000);
+      setTimeout(function() { el.remove(); }, 3300);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // API HELPERS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function api(path, options) {
+      options = options || {};
+      try {
+        const res = await fetch(path, options);
+        if (!res.ok) throw new Error(await res.text());
+        return res;
+      } catch (err) {
+        toast(err.message || "API request failed", "error");
+        throw err;
+      }
+    }
+
+    async function apiJson(path) {
+      const res = await api(path);
+      return res.json();
+    }
+
+    async function apiText(path) {
+      const res = await api(path);
+      return res.text();
+    }
+
+    async function apiPost(path, body) {
+      const options = { method: "POST" };
+      if (body !== undefined) {
+        options.headers = { "Content-Type": "application/json" };
+        options.body = JSON.stringify(body);
+      }
+      return api(path, options);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STATUS & UI UPDATES
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function setStatusIndicator(dotEl, textEl, status, text) {
+      dotEl.className = "status-dot";
+      if (status) dotEl.classList.add(status);
+      if (textEl) textEl.textContent = text;
+    }
+
+    function updateTimeline(stepId, status) {
+      const step = $("#" + stepId);
+      if (!step) return;
+      step.classList.remove("active", "complete");
+      if (status === "active") step.classList.add("active");
+      if (status === "complete") step.classList.add("complete");
+    }
+
+    function setTimelineStatus(stepId, pillClass, text, showSpinner) {
+      const el = $("#" + stepId + "Status");
+      if (!el) return;
+      el.textContent = "";
+
+      const pill = document.createElement("span");
+      pill.className = "pill" + (pillClass ? " " + pillClass : "");
+
+      if (showSpinner) {
+        const spinner = document.createElement("span");
+        spinner.className = "spinner sm";
+        pill.appendChild(spinner);
+        pill.appendChild(document.createTextNode(" "));
       }
 
-      async function apiText(path){
-        const r = await fetch(path);
-        if (!r.ok) throw new Error(await r.text());
-        return await r.text();
+      pill.appendChild(document.createTextNode(text));
+      el.appendChild(pill);
+    }
+
+    function updateDeviceCallout(device) {
+      const callout = $("#deviceCallout");
+      const logsPin = $("#logsDevicePin");
+
+      if (!device || (!device.url && !device.code)) {
+        callout.classList.remove("visible");
+        logsPin.classList.remove("visible");
+        return;
       }
 
-      async function apiJson(path){
-        const r = await fetch(path);
-        if (!r.ok) throw new Error(await r.text());
-        return await r.json();
+      callout.classList.add("visible");
+      logsPin.classList.add("visible");
+
+      $("#deviceUrl").textContent = device.url || "-";
+      $("#deviceCode").textContent = device.code || "-";
+      $("#deviceOpenLink").href = device.url || "#";
+
+      $("#logsDeviceCode").textContent = device.code || "-";
+      $("#logsDeviceUrl").textContent = device.url || "-";
+      $("#logsDeviceUrl").href = device.url || "#";
+    }
+
+    function updateNextAction(s) {
+      const titleEl = $("#nextActionTitle");
+      const descEl = $("#nextActionDesc");
+      const btnEl = $("#nextActionBtn");
+      const iconEl = $("#nextActionIcon");
+
+      const filesPresent = s.server && s.server.filesPresent;
+      const serverRunning = s.server && s.server.running;
+      const sessionPresent = s.auth && s.auth.sessionPresent;
+      const authMode = (s.server && s.server.authMode) || "authenticated";
+      const downloading = s.setup && s.setup.downloaderRunning;
+      const authing = s.setup && s.setup.authHelperRunning;
+      const hasDevice = s.setup && s.setup.device && (s.setup.device.url || s.setup.device.code);
+
+      btnEl.style.display = "none";
+      btnEl.onclick = null;
+
+      // Update icon based on state
+      var iconPath;
+      if (serverRunning) {
+        titleEl.textContent = "Server is Online";
+        descEl.textContent = "Your server is running and ready for players to connect.";
+        iconPath = '<circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/>';
+      } else if (downloading || authing) {
+        titleEl.textContent = hasDevice ? "Complete Device Login" : "Setup in Progress";
+        descEl.textContent = hasDevice
+          ? "Open the login URL below and enter the code to authenticate."
+          : "Please wait while the server files are downloaded...";
+        iconPath = '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>';
+      } else if (!filesPresent && authMode !== "offline") {
+        titleEl.textContent = "Begin Server Setup";
+        descEl.textContent = "Click the button to start authentication and download server files.";
+        btnEl.textContent = "Begin Setup";
+        btnEl.style.display = "";
+        btnEl.onclick = function() { beginSetup(); };
+        iconPath = '<polygon points="5 3 19 12 5 21 5 3"/>';
+      } else if (!filesPresent) {
+        titleEl.textContent = "Download Server Files";
+        descEl.textContent = "Server files are missing. Click to start the download.";
+        btnEl.textContent = "Download";
+        btnEl.style.display = "";
+        btnEl.onclick = function() { triggerDownload(); };
+        iconPath = '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>';
+      } else if (authMode !== "offline" && !sessionPresent) {
+        titleEl.textContent = "Authenticate Server";
+        descEl.textContent = "Complete device login to enable online mode.";
+        btnEl.textContent = "Start Auth";
+        btnEl.style.display = "";
+        btnEl.onclick = function() { triggerAuth(); };
+        iconPath = '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>';
+      } else {
+        titleEl.textContent = "Server Starting...";
+        descEl.textContent = "The server is booting up. Watch the logs for progress.";
+        iconPath = '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>';
       }
 
-      async function apiPost(path, body){
-        const opts = { method:"POST" };
-        if (body !== undefined){
-          opts.headers = { "Content-Type":"application/json" };
-          opts.body = JSON.stringify(body);
-        }
-        const r = await fetch(path, opts);
-        if (!r.ok) throw new Error(await r.text());
-        return await r.text();
+      // Update icon SVG content
+      var svg = iconEl.querySelector("svg");
+      if (svg && iconPath) {
+        svg.innerHTML = iconPath;
       }
+    }
 
-      function setHealth(state, text){
-        const dot = el("healthDot");
-        dot.classList.remove("ok","bad","warn");
-        if (state) dot.classList.add(state);
-        el("healthText").textContent = text;
-      }
-
-      function setSpin(id, on){
-        el(id).style.display = on ? "" : "none";
-      }
-
-      function setDeviceInfo(device){
-        const callout = el("deviceCallout");
-        if (!device || (!device.url && !device.code)){
-          callout.style.display = "none";
-          return;
-        }
-        callout.style.display = "";
-        el("deviceUrl").textContent = device.url || "—";
-        el("deviceUrl").href = device.url || "#";
-        el("deviceCode").textContent = device.code || "—";
-        el("deviceSource").textContent = device.source || "unknown";
-      }
-
-      function applyLogFilter(raw){
-        const q = (el("logFilter").value || "").trim().toLowerCase();
-        if (!q) return raw;
-        const lines = raw.split("\\n");
-        const keep = lines.filter(l => l.toLowerCase().includes(q));
-        return keep.join("\\n");
-      }
-
-      async function refreshStatus(){
+    async function refreshStatus() {
+      try {
         const s = await apiJson("/api/status");
-        lastStatus = s;
+        state.status = s;
 
-        const filesPresent = !!(s.server && s.server.filesPresent);
-        const serverRunning = !!(s.server && s.server.running);
-        const authStatePresent = !!(s.auth && s.auth.stateFilePresent);
-        const sessionPresent = !!(s.auth && s.auth.sessionPresent);
-        const downloading = !!(s.setup && s.setup.downloaderRunning);
-        const authing = !!(s.setup && s.setup.authHelperRunning);
-
-        if (serverRunning) setHealth("ok", "Server running");
-        else if (downloading || authing) setHealth("warn", "Setup in progress");
-        else setHealth("bad", "Not running yet");
-
-        setSpin("setupSpin", downloading || authing);
-        el("setupStateText").textContent = serverRunning ? "Complete" : ((downloading || authing) ? "Working…" : "Ready");
-
-        setSpin("runSpin", (!serverRunning && filesPresent && (sessionPresent || (s.server && s.server.authMode === "offline"))));
-        el("runStateText").textContent = serverRunning ? "Online" : "Waiting";
-
-        el("bindVal").textContent = (s.server && s.server.bind) || "";
-        el("authModeVal").textContent = (s.server && s.server.authMode) || "";
-        el("versionVal").textContent = (s.server && s.server.version) || "unknown";
-
-        el("statusLine").textContent = serverRunning ? `PID ${s.server.pid}` : (s.setup && s.setup.lastHint ? s.setup.lastHint : "");
-
-        // Hints
-        let hint = "";
+        const filesPresent = s.server && s.server.filesPresent;
+        const serverRunning = s.server && s.server.running;
+        const sessionPresent = s.auth && s.auth.sessionPresent;
         const authMode = (s.server && s.server.authMode) || "authenticated";
-        if (!filesPresent && authMode !== "offline") hint = "First run: click Begin setup, complete the device login once, then it downloads + boots.";
-        else if (!filesPresent) hint = "Missing server files: click Download only (or Begin setup).";
-        else if (authMode !== "offline" && !sessionPresent) hint = "Authenticate to enable online mode: click Auth only (or Begin setup).";
-        else if (!serverRunning) hint = "Server is starting. Watch logs for readiness.";
-        else hint = "Server is online.";
-        el("setupHint").textContent = hint;
+        const downloading = s.setup && s.setup.downloaderRunning;
+        const authing = s.setup && s.setup.authHelperRunning;
 
-        el("beginBtn").disabled = downloading || authing;
-        el("downloadOnlyBtn").disabled = downloading || authing;
-        el("authOnlyBtn").disabled = downloading || authing;
-
-        setDeviceInfo(s.setup && s.setup.device ? s.setup.device : null);
-      }
-
-      async function refreshLogs(){
-        const raw = await apiText(`/api/log?lines=${logLines}`);
-        logCache = raw || "";
-        el("logBox").textContent = applyLogFilter(logCache) || "(no logs yet)";
-        if (autoScrollEnabled){
-          el("logBox").scrollTop = el("logBox").scrollHeight;
+        // Header status
+        if (serverRunning) {
+          setStatusIndicator($("#headerStatusDot"), $("#headerStatusText"), "ok", "Online");
+          setStatusIndicator($("#heroStatusDot"), $("#heroStatusText"), "ok", "Server Online");
+        } else if (downloading || authing) {
+          setStatusIndicator($("#headerStatusDot"), $("#headerStatusText"), "warn", "Setting Up");
+          setStatusIndicator($("#heroStatusDot"), $("#heroStatusText"), "warn", "Setup in Progress");
+        } else {
+          setStatusIndicator($("#headerStatusDot"), $("#headerStatusText"), "bad", "Offline");
+          setStatusIndicator($("#heroStatusDot"), $("#heroStatusText"), "bad", "Not Running");
         }
-      }
 
-      async function sendCommand(cmd){
-        const c = String(cmd || "").trim();
-        if (!c) return;
-        await apiPost("/api/command", { command: c });
-        toast(`Queued: ${c}`);
-        el("cmdResult").textContent = `Queued. Watch logs for output: ${c}`;
-        el("cmdInput").value = "";
-        await refreshLogs();
-      }
+        // Info grid
+        $("#bindValue").textContent = (s.server && s.server.bind) || "-";
+        $("#authModeValue").textContent = (s.server && s.server.authMode) || "-";
+        $("#versionValue").textContent = (s.server && s.server.version) || "unknown";
+        $("#filesValue").textContent = filesPresent ? "Present" : "Missing";
 
-      async function beginSetup(){
-        // Smoothest path: trigger both auth + download.
-        const authRes = await apiPost("/api/setup/auth").catch(e => e);
-        const dlRes = await apiPost("/api/setup/download").catch(e => e);
-        if (authRes instanceof Error) toast("Auth trigger failed (see logs).");
-        if (dlRes instanceof Error) throw dlRes;
-        toast("Setup started. If prompted, approve the device login once.");
-        await refreshStatus();
-        await refreshLogs();
-      }
+        // Timeline steps
+        const authComplete = authMode === "offline" || sessionPresent;
+        const filesComplete = filesPresent;
+        const bootingOrRunning = filesPresent && (serverRunning || (authComplete && !downloading));
 
-      async function triggerDownloadOnly(){
+        updateTimeline("step1", authComplete ? "complete" : (authing ? "active" : ""));
+        updateTimeline("step2", filesComplete ? "complete" : (downloading ? "active" : ""));
+        updateTimeline("step3", serverRunning ? "complete" : (bootingOrRunning ? "active" : ""));
+        updateTimeline("step4", serverRunning ? "complete" : "");
+
+        // Timeline status text
+        if (authMode === "offline") {
+          setTimelineStatus("step1", "", "Offline Mode", false);
+        } else if (sessionPresent) {
+          setTimelineStatus("step1", "ok", "Authenticated", false);
+        } else if (authing) {
+          setTimelineStatus("step1", "warn", "Authenticating...", true);
+        } else {
+          setTimelineStatus("step1", "", "Pending", false);
+        }
+
+        if (filesComplete) {
+          setTimelineStatus("step2", "ok", "Files Ready", false);
+        } else if (downloading) {
+          setTimelineStatus("step2", "warn", "Downloading...", true);
+        } else {
+          setTimelineStatus("step2", "", "Pending", false);
+        }
+
+        if (serverRunning) {
+          setTimelineStatus("step3", "ok", "PID " + ((s.server && s.server.pid) || "?"), false);
+          setTimelineStatus("step4", "ok", "Ready to Connect", false);
+        } else if (bootingOrRunning && !downloading) {
+          setTimelineStatus("step3", "warn", "Starting...", true);
+          setTimelineStatus("step4", "", "Waiting", false);
+        } else {
+          setTimelineStatus("step3", "", "Waiting", false);
+          setTimelineStatus("step4", "", "Waiting", false);
+        }
+
+        // Device callout
+        updateDeviceCallout(s.setup && s.setup.device);
+
+        // Next action
+        updateNextAction(s);
+
+        // Button states
+        const busy = downloading || authing;
+        $("#beginSetupBtn").disabled = busy;
+        $("#downloadOnlyBtn").disabled = busy;
+        $("#authOnlyBtn").disabled = busy;
+
+      } catch (err) {
+        setStatusIndicator($("#headerStatusDot"), $("#headerStatusText"), "bad", "Error");
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LOGS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function applyLogFilter(text) {
+      const filter = ($("#logFilterInput").value || "").trim().toLowerCase();
+      if (!filter) return text;
+      const lines = text.split("\n");
+      return lines.filter(function(line) {
+        return line.toLowerCase().indexOf(filter) !== -1;
+      }).join("\n");
+    }
+
+    function showLogsEmpty(message) {
+      const viewer = $("#logsViewer");
+      viewer.textContent = "";
+
+      const empty = document.createElement("div");
+      empty.className = "logs-empty";
+
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 24 24");
+      svg.setAttribute("fill", "none");
+      svg.setAttribute("stroke", "currentColor");
+      svg.setAttribute("stroke-width", "2");
+      svg.innerHTML = '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>';
+
+      const p = document.createElement("p");
+      p.textContent = message;
+
+      empty.appendChild(svg);
+      empty.appendChild(p);
+      viewer.appendChild(empty);
+    }
+
+    async function refreshLogs() {
+      try {
+        const raw = await apiText("/api/log?lines=" + state.logLines);
+        state.logCache = raw || "";
+
+        const viewer = $("#logsViewer");
+        const filtered = applyLogFilter(state.logCache);
+
+        if (!filtered.trim()) {
+          showLogsEmpty(state.logCache ? "No matching lines found." : "No logs yet. Start the server to see output here.");
+        } else {
+          viewer.textContent = filtered;
+        }
+
+        if (state.autoScrollEnabled) {
+          viewer.scrollTop = viewer.scrollHeight;
+        }
+      } catch (err) {
+        // Silently fail log refresh
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // COMMANDS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function sendCommand(cmd) {
+      const command = String(cmd || "").trim();
+      if (!command) return;
+
+      await apiPost("/api/command", { command: command });
+      toast("Command queued: " + command, "success");
+
+      state.lastCommand = { command: command, time: new Date() };
+      updateLastCommandDisplay();
+
+      $("#cmdInput").value = "";
+      await refreshLogs();
+    }
+
+    function updateLastCommandDisplay() {
+      const el = $("#lastCommandDisplay");
+      if (state.lastCommand) {
+        const time = state.lastCommand.time.toLocaleTimeString();
+        el.textContent = "";
+        el.appendChild(document.createTextNode("Last queued: "));
+        const code = document.createElement("code");
+        code.textContent = state.lastCommand.command;
+        el.appendChild(code);
+        el.appendChild(document.createTextNode(" at " + time));
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SETUP ACTIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function beginSetup() {
+      toast("Starting setup...", "info");
+      try {
+        await apiPost("/api/setup/auth").catch(function() {});
         await apiPost("/api/setup/download");
-        toast("Download started.");
+        toast("Setup started. Complete device login if prompted.", "success");
         await refreshStatus();
         await refreshLogs();
+      } catch (err) {
+        // Error already toasted
       }
+    }
 
-      async function triggerAuthOnly(){
+    async function triggerDownload() {
+      try {
+        await apiPost("/api/setup/download");
+        toast("Download started.", "success");
+        await refreshStatus();
+        await refreshLogs();
+      } catch (err) {
+        // Error already toasted
+      }
+    }
+
+    async function triggerAuth() {
+      try {
         await apiPost("/api/setup/auth");
-        toast("Auth started. If prompted, complete the device login.");
+        toast("Auth started. Complete device login if prompted.", "success");
         await refreshStatus();
         await refreshLogs();
+      } catch (err) {
+        // Error already toasted
       }
+    }
 
-      async function resetAuth(){
-        if (!confirm("Reset auth state? This clears /data/auth/state.json and may require device login again.")) return;
+    async function resetAuth() {
+      if (!confirm("Reset authentication state? This clears /data/auth/state.json and may require device login again.")) return;
+      try {
         await apiPost("/api/setup/reset-auth");
-        toast("Auth state cleared.");
+        toast("Auth state cleared.", "success");
         await refreshStatus();
+      } catch (err) {
+        // Error already toasted
       }
+    }
 
-      async function clearConsole(){
-        if (!confirm("Clear the command queue file?")) return;
+    async function clearCommandQueue() {
+      if (!confirm("Clear the command queue file?")) return;
+      try {
         await apiPost("/api/console/clear");
-        toast("Command queue cleared.");
+        toast("Command queue cleared.", "success");
+      } catch (err) {
+        // Error already toasted
       }
+    }
 
-      async function refreshMods(){
+    // ═══════════════════════════════════════════════════════════════════════
+    // FILES
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function refreshFiles() {
+      try {
         const mods = await apiJson("/api/mods/list?kind=mods");
         const plugins = await apiJson("/api/mods/list?kind=plugins");
 
-        function renderList(targetId, kind, items){
-          const target = el(targetId);
-          if (!items || !items.length){
-            target.innerHTML = `<div class="muted2">(empty)</div>`;
-            return;
-          }
-          target.innerHTML = items.map(x => {
-            const name = escapeHtml(x.name);
-            return `<div><span style="min-width:0; overflow:hidden; text-overflow:ellipsis;"><code class="mono">${name}</code><span class="muted2" style="margin-left:8px; font-size:12px;">${x.size} bytes</span></span><button class="btn-danger btn-chip" data-kind="${kind}" data-name="${encodeURIComponent(x.name)}">Delete</button></div>`;
-          }).join("");
+        renderFileList("modsList", "mods", mods);
+        renderFileList("pluginsList", "plugins", plugins);
+      } catch (err) {
+        // Error already toasted
+      }
+    }
+
+    function renderFileList(containerId, kind, files) {
+      const container = $("#" + containerId);
+      container.textContent = "";
+
+      if (!files || files.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "file-empty";
+
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("fill", "none");
+        svg.setAttribute("stroke", "currentColor");
+        svg.setAttribute("stroke-width", "2");
+        svg.innerHTML = '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>';
+
+        const p = document.createElement("p");
+        p.textContent = "No " + kind + " installed";
+
+        empty.appendChild(svg);
+        empty.appendChild(p);
+        container.appendChild(empty);
+        return;
+      }
+
+      files.forEach(function(f) {
+        const item = document.createElement("div");
+        item.className = "file-item";
+
+        const iconDiv = document.createElement("div");
+        iconDiv.className = "file-icon";
+        const iconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        iconSvg.setAttribute("viewBox", "0 0 24 24");
+        iconSvg.setAttribute("fill", "none");
+        iconSvg.setAttribute("stroke", "currentColor");
+        iconSvg.setAttribute("stroke-width", "2");
+        iconSvg.innerHTML = '<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/>';
+        iconDiv.appendChild(iconSvg);
+
+        const infoDiv = document.createElement("div");
+        infoDiv.className = "file-info";
+        const nameDiv = document.createElement("div");
+        nameDiv.className = "file-name";
+        nameDiv.textContent = f.name;
+        const metaDiv = document.createElement("div");
+        metaDiv.className = "file-meta";
+        metaDiv.textContent = formatBytes(f.size);
+        infoDiv.appendChild(nameDiv);
+        infoDiv.appendChild(metaDiv);
+
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "file-actions";
+        const delBtn = document.createElement("button");
+        delBtn.className = "btn-danger btn-sm";
+        delBtn.type = "button";
+        delBtn.textContent = "Delete";
+        delBtn.onclick = function() { deleteFile(kind, f.name); };
+        actionsDiv.appendChild(delBtn);
+
+        item.appendChild(iconDiv);
+        item.appendChild(infoDiv);
+        item.appendChild(actionsDiv);
+        container.appendChild(item);
+      });
+    }
+
+    async function deleteFile(kind, name) {
+      if (!confirm("Delete this file?")) return;
+      try {
+        await apiPost("/api/mods/delete?kind=" + encodeURIComponent(kind) + "&name=" + encodeURIComponent(name));
+        toast("File deleted.", "success");
+        await refreshFiles();
+      } catch (err) {
+        // Error already toasted
+      }
+    }
+
+    async function uploadFile(kind, file) {
+      const fd = new FormData();
+      fd.append("file", file);
+
+      try {
+        const res = await fetch("/api/mods/upload?kind=" + encodeURIComponent(kind), {
+          method: "POST",
+          body: fd
+        });
+        if (!res.ok) throw new Error(await res.text());
+        toast("File uploaded.", "success");
+        await refreshFiles();
+      } catch (err) {
+        toast(err.message || "Upload failed", "error");
+      }
+    }
+
+    function setupFileUpload(areaId, inputId, kind) {
+      const area = $("#" + areaId);
+      const input = $("#" + inputId);
+
+      area.addEventListener("click", function() { input.click(); });
+
+      input.addEventListener("change", function() {
+        if (input.files && input.files[0]) {
+          uploadFile(kind, input.files[0]);
+          input.value = "";
         }
+      });
 
-        renderList("modsList", "mods", mods);
-        renderList("pluginsList", "plugins", plugins);
+      area.addEventListener("dragover", function(e) {
+        e.preventDefault();
+        area.classList.add("dragover");
+      });
 
-        for (const btn of document.querySelectorAll("#modsList button, #pluginsList button")){
-          btn.addEventListener("click", async () => {
-            const kind = btn.getAttribute("data-kind");
-            const name = btn.getAttribute("data-name");
-            if (!kind || !name) return;
-            if (!confirm("Delete this file?")) return;
-            try{
-              await apiPost(`/api/mods/delete?kind=${kind}&name=${name}`);
-              toast("Deleted.");
-              await refreshMods();
-            }catch(e){ toast(String(e.message || e)); }
+      area.addEventListener("dragleave", function() {
+        area.classList.remove("dragover");
+      });
+
+      area.addEventListener("drop", function(e) {
+        e.preventDefault();
+        area.classList.remove("dragover");
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          uploadFile(kind, e.dataTransfer.files[0]);
+        }
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // NAVIGATION
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function switchPage(pageName) {
+      state.currentPage = pageName;
+
+      $$(".nav-tab").forEach(function(tab) {
+        tab.classList.toggle("active", tab.dataset.page === pageName);
+      });
+
+      $$(".page").forEach(function(page) {
+        page.classList.toggle("active", page.id === "page-" + pageName);
+      });
+
+      if (pageName === "logs") {
+        refreshLogs();
+      } else if (pageName === "files") {
+        refreshFiles();
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // COMMAND PRESETS (Safe DOM construction)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const presets = {
+      safe: [
+        { name: "Help", desc: "Show available commands", cmd: "/help", icon: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>' },
+        { name: "List Players", desc: "Show connected players", cmd: "/list", icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' }
+      ],
+      auth: [
+        { name: "Auth Status", desc: "Check authentication state", cmd: "/auth status", icon: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' },
+        { name: "Device Link", desc: "Start device authentication", cmd: "/auth login device", confirm: "Start device auth on the server?", icon: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>' }
+      ],
+      advanced: [
+        { name: "Stop Server", desc: "Gracefully stop the server", cmd: "/stop", confirm: "Are you sure you want to stop the server?", danger: true, icon: '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>' }
+      ]
+    };
+
+    function renderPresets() {
+      function renderGroup(containerId, items) {
+        const container = $("#" + containerId);
+        container.textContent = "";
+
+        items.forEach(function(p) {
+          const btn = document.createElement("button");
+          btn.className = "preset-btn" + (p.danger ? " danger" : "");
+          btn.type = "button";
+
+          const iconDiv = document.createElement("div");
+          iconDiv.className = "preset-icon";
+          const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          svg.setAttribute("viewBox", "0 0 24 24");
+          svg.setAttribute("fill", "none");
+          svg.setAttribute("stroke", "currentColor");
+          svg.setAttribute("stroke-width", "2");
+          svg.innerHTML = p.icon;
+          iconDiv.appendChild(svg);
+
+          const infoDiv = document.createElement("div");
+          infoDiv.className = "preset-info";
+          const nameDiv = document.createElement("div");
+          nameDiv.className = "preset-name";
+          nameDiv.textContent = p.name;
+          const descDiv = document.createElement("div");
+          descDiv.className = "preset-desc";
+          descDiv.textContent = p.desc;
+          infoDiv.appendChild(nameDiv);
+          infoDiv.appendChild(descDiv);
+
+          const cmdSpan = document.createElement("span");
+          cmdSpan.className = "preset-cmd";
+          cmdSpan.textContent = p.cmd;
+
+          btn.appendChild(iconDiv);
+          btn.appendChild(infoDiv);
+          btn.appendChild(cmdSpan);
+
+          btn.addEventListener("click", async function() {
+            if (p.confirm && !confirm(p.confirm)) return;
+            await sendCommand(p.cmd);
           });
+
+          container.appendChild(btn);
+        });
+      }
+
+      renderGroup("safePresets", presets.safe);
+      renderGroup("authPresets", presets.auth);
+      renderGroup("advancedPresets", presets.advanced);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INITIALIZATION
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function init() {
+      // Load saved preferences
+      try {
+        const savedSize = parseInt(localStorage.getItem("fluxMonoSize") || "13", 10);
+        if (savedSize >= 10 && savedSize <= 20) state.monoSize = savedSize;
+      } catch (e) {}
+
+      document.documentElement.style.setProperty("--mono-size", state.monoSize + "px");
+      $("#fontSizeDisplay").textContent = state.monoSize;
+
+      // Navigation
+      $$(".nav-tab").forEach(function(tab) {
+        tab.addEventListener("click", function() { switchPage(tab.dataset.page); });
+      });
+
+      // Refresh button
+      $("#refreshAllBtn").addEventListener("click", async function() {
+        await refreshStatus();
+        await refreshLogs();
+        toast("Refreshed", "success");
+      });
+
+      // Setup buttons
+      $("#beginSetupBtn").addEventListener("click", beginSetup);
+      $("#downloadOnlyBtn").addEventListener("click", triggerDownload);
+      $("#authOnlyBtn").addEventListener("click", triggerAuth);
+      $("#resetAuthBtn").addEventListener("click", resetAuth);
+
+      // Device callout
+      $("#copyUrlBtn").addEventListener("click", function() {
+        copyToClipboard(state.status && state.status.setup && state.status.setup.device ? state.status.setup.device.url || "" : "");
+      });
+      $("#copyCodeBtn").addEventListener("click", function() {
+        copyToClipboard(state.status && state.status.setup && state.status.setup.device ? state.status.setup.device.code || "" : "");
+      });
+      $("#deviceRefreshBtn").addEventListener("click", refreshStatus);
+
+      // Logs toolbar
+      $("#fontDownBtn").addEventListener("click", function() {
+        state.monoSize = Math.max(10, state.monoSize - 1);
+        document.documentElement.style.setProperty("--mono-size", state.monoSize + "px");
+        $("#fontSizeDisplay").textContent = state.monoSize;
+        try { localStorage.setItem("fluxMonoSize", String(state.monoSize)); } catch (e) {}
+      });
+
+      $("#fontUpBtn").addEventListener("click", function() {
+        state.monoSize = Math.min(20, state.monoSize + 1);
+        document.documentElement.style.setProperty("--mono-size", state.monoSize + "px");
+        $("#fontSizeDisplay").textContent = state.monoSize;
+        try { localStorage.setItem("fluxMonoSize", String(state.monoSize)); } catch (e) {}
+      });
+
+      $("#wrapToggle").addEventListener("click", function() {
+        state.wrapEnabled = !state.wrapEnabled;
+        document.body.classList.toggle("logs-nowrap", !state.wrapEnabled);
+        $("#wrapToggle").textContent = "Wrap: " + (state.wrapEnabled ? "On" : "Off");
+      });
+
+      $("#autoScrollToggle").addEventListener("click", function() {
+        state.autoScrollEnabled = !state.autoScrollEnabled;
+        $("#autoScrollToggle").textContent = "Auto-scroll: " + (state.autoScrollEnabled ? "On" : "Off");
+      });
+
+      $$("#linesButtonGroup button").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+          state.logLines = parseInt(btn.dataset.lines, 10);
+          $$("#linesButtonGroup button").forEach(function(b) { b.classList.remove("active"); });
+          btn.classList.add("active");
+          $("#logLinesPill").textContent = state.logLines + " lines";
+          refreshLogs();
+        });
+      });
+
+      $("#copyLogsBtn").addEventListener("click", function() {
+        copyToClipboard($("#logsViewer").textContent);
+      });
+
+      $("#downloadLogsBtn").addEventListener("click", function() {
+        const blob = new Blob([state.logCache], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "hytale-server-" + new Date().toISOString().slice(0, 10) + ".log";
+        a.click();
+        URL.revokeObjectURL(url);
+        toast("Log file downloaded", "success");
+      });
+
+      $("#logFilterInput").addEventListener("input", function() {
+        const viewer = $("#logsViewer");
+        const filtered = applyLogFilter(state.logCache);
+        if (!filtered.trim()) {
+          showLogsEmpty("No matching lines found.");
+        } else {
+          viewer.textContent = filtered;
         }
-      }
 
-      async function upload(kind, fileInputId){
-        const fi = el(fileInputId);
-        const f = fi.files && fi.files[0];
-        if (!f) return;
-        const fd = new FormData();
-        fd.append("file", f);
-        const r = await fetch(`/api/mods/upload?kind=${kind}`, { method:"POST", body: fd });
-        if (!r.ok){ toast(await r.text()); return; }
-        fi.value = "";
-        toast("Uploaded.");
-        await refreshMods();
-      }
-
-      function copyText(v){
-        const text = String(v || "");
-        if (!text) return;
-        navigator.clipboard.writeText(text).then(() => toast("Copied."), () => toast("Copy failed."));
-      }
-
-      function renderPresets(){
-        const row = el("presetRow");
-        row.innerHTML = "";
-        for (const p of presets){
-          const b = document.createElement("button");
-          b.type = "button";
-          b.className = "btn-chip";
-          b.textContent = p.label;
-          b.addEventListener("click", async () => {
-            try{
-              if (p.confirm && !confirm(p.confirm)) return;
-              await sendCommand(p.command);
-            }catch(e){ toast(String(e.message || e)); }
-          });
-          row.appendChild(b);
-        }
-      }
-
-      // Wire-up
-      el("refreshAllBtn").addEventListener("click", async () => { try { await refreshStatus(); await refreshLogs(); } catch(e){ toast(String(e.message || e)); } });
-      el("beginBtn").addEventListener("click", async () => { try { await beginSetup(); } catch(e){ toast(String(e.message || e)); } });
-      el("downloadOnlyBtn").addEventListener("click", async () => { try { await triggerDownloadOnly(); } catch(e){ toast(String(e.message || e)); } });
-      el("authOnlyBtn").addEventListener("click", async () => { try { await triggerAuthOnly(); } catch(e){ toast(String(e.message || e)); } });
-      el("resetAuthBtn").addEventListener("click", async () => { try { await resetAuth(); } catch(e){ toast(String(e.message || e)); } });
-
-      el("sendBtn").addEventListener("click", async () => { try { await sendCommand(el("cmdInput").value); } catch(e){ toast(String(e.message || e)); } });
-      el("cmdInput").addEventListener("keydown", (e) => { if (e.key === "Enter") el("sendBtn").click(); });
-      el("clearConsoleBtn").addEventListener("click", async () => { try { await clearConsole(); } catch(e){ toast(String(e.message || e)); } });
-
-      el("wrapBtn").addEventListener("click", () => {
-        wrapEnabled = !wrapEnabled;
-        document.body.classList.toggle("nowrap", !wrapEnabled);
-        el("wrapBtn").textContent = `Wrap: ${wrapEnabled ? "on" : "off"}`;
+        var clearBtn = $("#clearFilterBtn");
+        clearBtn.style.display = $("#logFilterInput").value ? "" : "none";
       });
-      el("autoBtn").addEventListener("click", () => {
-        autoScrollEnabled = !autoScrollEnabled;
-        el("autoBtn").textContent = `Auto-scroll: ${autoScrollEnabled ? "on" : "off"}`;
-      });
-      el("log400").addEventListener("click", async () => { logLines = 400; await refreshLogs(); });
-      el("log1200").addEventListener("click", async () => { logLines = 1200; await refreshLogs(); });
-      el("log6000").addEventListener("click", async () => { logLines = 6000; await refreshLogs(); });
-      el("logFilter").addEventListener("input", () => { el("logBox").textContent = applyLogFilter(logCache) || "(no logs yet)"; });
-      el("copyLogsBtn").addEventListener("click", () => { copyText(el("logBox").textContent); });
 
-      el("modsRefreshBtn").addEventListener("click", async () => { try { await refreshMods(); } catch(e){ toast(String(e.message || e)); } });
-      el("modsUploadForm").addEventListener("submit", async (e) => { e.preventDefault(); await upload("mods", "modsFile"); });
-      el("pluginsUploadForm").addEventListener("submit", async (e) => { e.preventDefault(); await upload("plugins", "pluginsFile"); });
+      $("#clearFilterBtn").addEventListener("click", function() {
+        $("#logFilterInput").value = "";
+        $("#clearFilterBtn").style.display = "none";
+        var viewer = $("#logsViewer");
+        viewer.textContent = state.logCache || "";
+      });
 
-      el("copyUrlBtn").addEventListener("click", () => {
-        const d = lastStatus && lastStatus.setup && lastStatus.setup.device ? lastStatus.setup.device : null;
-        copyText(d && d.url ? d.url : "");
+      // Logs device pin
+      $("#logsDeviceCopyUrl").addEventListener("click", function() {
+        copyToClipboard(state.status && state.status.setup && state.status.setup.device ? state.status.setup.device.url || "" : "");
       });
-      el("copyCodeBtn").addEventListener("click", () => {
-        const d = lastStatus && lastStatus.setup && lastStatus.setup.device ? lastStatus.setup.device : null;
-        copyText(d && d.code ? d.code : "");
+      $("#logsDeviceCopyCode").addEventListener("click", function() {
+        copyToClipboard(state.status && state.status.setup && state.status.setup.device ? state.status.setup.device.code || "" : "");
       });
+
+      // Console
+      $("#sendCmdBtn").addEventListener("click", function() { sendCommand($("#cmdInput").value); });
+      $("#cmdInput").addEventListener("keydown", function(e) {
+        if (e.key === "Enter") sendCommand($("#cmdInput").value);
+      });
+      $("#clearQueueBtn").addEventListener("click", clearCommandQueue);
 
       renderPresets();
-      document.body.classList.toggle("nowrap", false);
 
-      // Restore per-browser log font size preference
-      try{
-        const saved = parseInt(localStorage.getItem("fluxMonoSize") || "13", 10);
-        if (Number.isFinite(saved) && saved >= 10 && saved <= 20) monoSize = saved;
-      }catch(e){}
-      document.documentElement.style.setProperty("--monoSize", `${monoSize}px`);
+      // Files
+      $("#refreshModsBtn").addEventListener("click", refreshFiles);
+      $("#refreshPluginsBtn").addEventListener("click", refreshFiles);
+      setupFileUpload("modsUploadArea", "modsFileInput", "mods");
+      setupFileUpload("pluginsUploadArea", "pluginsFileInput", "plugins");
 
-      el("fontDownBtn").addEventListener("click", () => {
-        monoSize = Math.max(10, monoSize - 1);
-        document.documentElement.style.setProperty("--monoSize", `${monoSize}px`);
-        try{ localStorage.setItem("fluxMonoSize", String(monoSize)); }catch(e){}
-      });
-      el("fontUpBtn").addEventListener("click", () => {
-        monoSize = Math.min(20, monoSize + 1);
-        document.documentElement.style.setProperty("--monoSize", `${monoSize}px`);
-        try{ localStorage.setItem("fluxMonoSize", String(monoSize)); }catch(e){}
-      });
-
-      (async () => {
-        try{
+      // Initial data load
+      (async function() {
+        try {
           await refreshStatus();
           await refreshLogs();
-          await refreshMods();
-        }catch(e){
-          setHealth("bad", "Unable to load");
-          toast(String(e.message || e));
+          await refreshFiles();
+        } catch (err) {
+          setStatusIndicator($("#headerStatusDot"), $("#headerStatusText"), "bad", "Connection Error");
         }
-        setInterval(async () => { try { await refreshStatus(); } catch(e){} }, 3500);
-        setInterval(async () => { try { await refreshLogs(); } catch(e){} }, 5500);
+
+        // Polling
+        setInterval(refreshStatus, 3500);
+        setInterval(function() {
+          if (state.currentPage === "logs" || state.currentPage === "dashboard") {
+            refreshLogs();
+          }
+        }, 5500);
       })();
-    </script>
-  </body>
+
+      // Show warning banner (panel is public)
+      $("#warningBanner").classList.add("visible");
+    }
+
+    // Start
+    init();
+  </script>
+</body>
 </html>

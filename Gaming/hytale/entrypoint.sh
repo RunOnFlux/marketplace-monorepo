@@ -403,8 +403,10 @@ PY
 
 auth_state_has_session_tokens() {
   AUTH_STATE_PATH="$AUTH_STATE_PATH" python3 - <<'PY'
+import datetime as dt
 import json
 import os
+import re
 from pathlib import Path
 
 path = Path(os.environ.get("AUTH_STATE_PATH", ""))
@@ -419,8 +421,37 @@ except Exception:
 session = state.get("session") if isinstance(state.get("session"), dict) else {}
 session_token = str(session.get("sessionToken", "")).strip()
 identity_token = str(session.get("identityToken", "")).strip()
+expires_at = str(session.get("expiresAt", "")).strip()
 
-raise SystemExit(0 if (session_token and identity_token) else 1)
+def parse_dt(raw: str) -> dt.datetime | None:
+  s = (raw or "").strip()
+  if not s:
+    return None
+  if s.endswith("Z"):
+    s = s[:-1] + "+00:00"
+  # Hytale uses RFC3339 with nanoseconds; Python only supports microseconds.
+  # Example: 2026-01-30T12:28:06.610707481+00:00
+  m = re.match(r"^(.*?)(\.(\d+))?([+-]\d\d:\d\d)$", s)
+  if m and m.group(2):
+    base = m.group(1)
+    frac = m.group(3) or ""
+    tz = m.group(4)
+    frac = (frac + "000000")[:6]
+    s = f"{base}.{frac}{tz}"
+  try:
+    return dt.datetime.fromisoformat(s)
+  except Exception:
+    return None
+
+def is_valid_expiry(raw: str) -> bool:
+  exp = parse_dt(raw)
+  if not exp:
+    return False
+  now = dt.datetime.now(dt.timezone.utc)
+  return exp > (now + dt.timedelta(seconds=120))
+
+ok = bool(session_token and identity_token and is_valid_expiry(expires_at))
+raise SystemExit(0 if ok else 1)
 PY
 }
 
