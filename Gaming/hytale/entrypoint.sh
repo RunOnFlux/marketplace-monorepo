@@ -118,6 +118,25 @@ bool_true() {
   esac
 }
 
+LOG_CAPTURE_STARTED="0"
+
+start_log_capture() {
+  if [[ "$LOG_CAPTURE_STARTED" == "1" ]]; then
+    return 0
+  fi
+
+  if ! bool_true "$HYTALE_PANEL_ENABLED"; then
+    return 0
+  fi
+
+  mkdir -p "$(dirname "$HYTALE_LOG_FILE")"
+  touch "$HYTALE_LOG_FILE"
+
+  exec > >(tee -a "$HYTALE_LOG_FILE") 2>&1
+  LOG_CAPTURE_STARTED="1"
+  return 0
+}
+
 PANEL_PID=""
 
 start_hytale_panel() {
@@ -134,8 +153,7 @@ start_hytale_panel() {
     return 1
   fi
 
-  mkdir -p "$(dirname "$HYTALE_LOG_FILE")"
-  touch "$HYTALE_LOG_FILE"
+  start_log_capture || true
 
   export HYTALE_AUTH_STATE_PATH="$AUTH_STATE_PATH"
   export HYTALE_CONSOLE_FILE="$CONSOLE_FILE"
@@ -158,6 +176,7 @@ stop_hytale_panel() {
 }
 
 idle_forever() {
+  start_log_capture || true
   start_hytale_panel || true
   trap 'stop_hytale_panel; exit 0' TERM INT
   while true; do
@@ -984,6 +1003,8 @@ PY
 
 mkdir -p "$DATA_DIR"
 
+start_log_capture || true
+
 run_mode="${HYTALE_RUN_MODE,,}"
 if [[ "$run_mode" == "auth" ]]; then
   exec /opt/hytale/hytale-auth --state-path "$AUTH_STATE_PATH" ensure --client-id "$HYTALE_AUTH_CLIENT_ID"
@@ -1141,24 +1162,12 @@ fi
 
 start_hytale_panel
 
-stdout_fifo="/tmp/hytale-server.stdout"
-rm -f "$stdout_fifo"
-mkfifo "$stdout_fifo"
-
-tee -a "$HYTALE_LOG_FILE" < "$stdout_fifo" &
-tee_pid="$!"
-
 cd "$SERVER_DIR"
 
 server_pid=""
 cleanup() {
-  rm -f "$stdout_fifo" 2>/dev/null || true
   rm -f "$HYTALE_SERVER_PID_FILE" 2>/dev/null || true
   stop_hytale_panel
-  if [[ -n "${tee_pid:-}" ]]; then
-    kill -TERM "$tee_pid" 2>/dev/null || true
-    wait "$tee_pid" 2>/dev/null || true
-  fi
 }
 
 forward_term() {
@@ -1178,9 +1187,9 @@ if [[ "$HYTALE_CONSOLE_MODE" == "file" ]]; then
       printf '%s\n' "$startup_rendered" > "$startup_file"
     fi
   fi
-  java $JAVA_OPTS -jar "$JAR_PATH" "${args[@]}" < <({ cat "$startup_file"; tail -n 0 -F "$CONSOLE_FILE"; }) >"$stdout_fifo" 2>&1 &
+  java $JAVA_OPTS -jar "$JAR_PATH" "${args[@]}" < <({ cat "$startup_file"; tail -n 0 -F "$CONSOLE_FILE"; }) &
 else
-  java $JAVA_OPTS -jar "$JAR_PATH" "${args[@]}" >"$stdout_fifo" 2>&1 &
+  java $JAVA_OPTS -jar "$JAR_PATH" "${args[@]}" &
 fi
 
 server_pid="$!"
