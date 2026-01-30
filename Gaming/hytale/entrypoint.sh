@@ -1138,28 +1138,6 @@ ensure_hytale_auth() {
     return 0
   fi
 
-  if ! bool_true "$HYTALE_AUTH_AUTO"; then
-    return 0
-  fi
-
-  if [[ ! -x /opt/hytale/hytale-auth ]]; then
-    msg "HYTALE_AUTH_AUTO=1 is set, but /opt/hytale/hytale-auth is missing."
-    return 1
-  fi
-
-  mkdir -p "$HYTALE_AUTH_STATE_DIR"
-
-  msg "Ensuring Hytale authentication (device login may be required)..."
-  if ! /opt/hytale/hytale-auth --state-path "$AUTH_STATE_PATH" ensure --client-id "$HYTALE_AUTH_CLIENT_ID"; then
-    msg ""
-    msg "Authentication was not completed."
-    msg "If you have multiple Hytale profiles, set one of:"
-    msg "- HYTALE_AUTH_PROFILE_UUID"
-    msg "- HYTALE_AUTH_PROFILE_USERNAME"
-    msg ""
-    return 1
-  fi
-
   mapfile -t __tokens < <(AUTH_STATE_PATH="$AUTH_STATE_PATH" python3 - <<'PY'
 import json
 import os
@@ -1184,8 +1162,54 @@ PY
 )
 
   if [[ ${#__tokens[@]} -lt 2 ]]; then
-    msg "Auth state is missing session tokens at ${AUTH_STATE_PATH}"
-    return 1
+    if ! bool_true "$HYTALE_AUTH_AUTO"; then
+      return 1
+    fi
+
+    if [[ ! -x /opt/hytale/hytale-auth ]]; then
+      msg "HYTALE_AUTH_AUTO=1 is set, but /opt/hytale/hytale-auth is missing."
+      return 1
+    fi
+
+    mkdir -p "$HYTALE_AUTH_STATE_DIR"
+
+    msg "Ensuring Hytale authentication (device login may be required)..."
+    if ! /opt/hytale/hytale-auth --state-path "$AUTH_STATE_PATH" ensure --client-id "$HYTALE_AUTH_CLIENT_ID"; then
+      msg ""
+      msg "Authentication was not completed."
+      msg "If you have multiple Hytale profiles, set one of:"
+      msg "- HYTALE_AUTH_PROFILE_UUID"
+      msg "- HYTALE_AUTH_PROFILE_USERNAME"
+      msg ""
+      return 1
+    fi
+
+    mapfile -t __tokens < <(AUTH_STATE_PATH="$AUTH_STATE_PATH" python3 - <<'PY'
+import json
+import os
+
+path = os.environ.get("AUTH_STATE_PATH")
+if not path:
+  raise SystemExit(1)
+
+with open(path, "r", encoding="utf-8") as f:
+  state = json.load(f)
+
+session = state.get("session") or {}
+session_token = str(session.get("sessionToken", "")).strip()
+identity_token = str(session.get("identityToken", "")).strip()
+
+if not session_token or not identity_token:
+  raise SystemExit(1)
+
+print(session_token)
+print(identity_token)
+PY
+)
+    if [[ ${#__tokens[@]} -lt 2 ]]; then
+      msg "Auth state is missing session tokens at ${AUTH_STATE_PATH}"
+      return 1
+    fi
   fi
 
   export HYTALE_SERVER_SESSION_TOKEN="${__tokens[0]}"
