@@ -23,6 +23,11 @@ HYTALE_AUTO_DOWNLOAD="${HYTALE_AUTO_DOWNLOAD:-0}"
 HYTALE_AUTO_UPDATE="${HYTALE_AUTO_UPDATE:-0}"
 HYTALE_KEEP_DOWNLOAD_ARCHIVE="${HYTALE_KEEP_DOWNLOAD_ARCHIVE:-0}"
 HYTALE_UPDATE_SKIP_PATTERNS="${HYTALE_UPDATE_SKIP_PATTERNS:-universe/**,logs/**,mods/**,.cache/**,*.json}"
+HYTALE_DOWNLOADER_CREDENTIALS_PATH="${HYTALE_DOWNLOADER_CREDENTIALS_PATH:-${DATA_DIR}/.hytale-downloader-credentials.json}"
+HYTALE_TRIGGER_DOWNLOAD_FILE="${HYTALE_TRIGGER_DOWNLOAD_FILE:-${DATA_DIR}/.hytale-flux.trigger-download}"
+HYTALE_TRIGGER_AUTH_FILE="${HYTALE_TRIGGER_AUTH_FILE:-${DATA_DIR}/.hytale-flux.trigger-auth}"
+HYTALE_DOWNLOADER_PID_FILE="${HYTALE_DOWNLOADER_PID_FILE:-/tmp/hytale-downloader.pid}"
+HYTALE_AUTH_HELPER_PID_FILE="${HYTALE_AUTH_HELPER_PID_FILE:-/tmp/hytale-auth.pid}"
 HYTALE_CONSOLE_MODE="${HYTALE_CONSOLE_MODE:-file}"
 HYTALE_CONSOLE_CLEAR_ON_START="${HYTALE_CONSOLE_CLEAR_ON_START:-1}"
 HYTALE_STARTUP_COMMANDS="${HYTALE_STARTUP_COMMANDS:-}"
@@ -109,6 +114,10 @@ sync_hytale_downloader_credentials() {
   return 0
 }
 
+hytale_has_server_files() {
+  [[ -f "$JAR_PATH" && -f "$ASSETS_PATH" ]]
+}
+
 bool_true() {
   local value="${1:-}"
   value="${value,,}"
@@ -181,6 +190,189 @@ idle_forever() {
   trap 'stop_hytale_panel; exit 0' TERM INT
   while true; do
     sleep 3600
+  done
+}
+
+wait_for_hytale_files() {
+  local warned="0"
+
+  while ! hytale_has_server_files; do
+    if bool_true "$HYTALE_AUTO_DOWNLOAD" || [[ -f "$HYTALE_TRIGGER_DOWNLOAD_FILE" ]]; then
+      rm -f "$HYTALE_TRIGGER_DOWNLOAD_FILE" 2>/dev/null || true
+      warned="0"
+
+      msg "Downloading Hytale server files (patchline: ${HYTALE_PATCHLINE})..."
+      msg "If this is the first run, a device-login URL + code will appear in logs. Complete it in your browser."
+
+      local game_zip="${DATA_DIR}/game.zip"
+      local extract_dir="${DATA_DIR}/.extract"
+
+      mkdir -p "$DATA_DIR"
+      cd "$DATA_DIR"
+
+      if [[ -s "$game_zip" ]]; then
+        msg "Found existing ${game_zip}; attempting extraction..."
+        rm -rf "$extract_dir"
+        mkdir -p "$extract_dir"
+        if extract_hytale_archive "$game_zip" "$extract_dir"; then
+          if latest_version="$(hytale_downloader_print_version 2>/dev/null)"; then
+            write_version_marker "$latest_version" || true
+          fi
+          if ! bool_true "$HYTALE_KEEP_DOWNLOAD_ARCHIVE"; then
+            rm -rf "$extract_dir"
+            rm -f "$game_zip"
+          fi
+          continue
+        fi
+        msg "Existing archive extraction failed; re-downloading..."
+      fi
+
+      downloader_status=0
+      (
+        set -euo pipefail
+        HOME="$DATA_DIR" XDG_CONFIG_HOME="$DATA_DIR/.config" \
+          /opt/hytale/hytale-downloader \
+          -patchline "$HYTALE_PATCHLINE" \
+          -download-path "$game_zip" \
+          -credentials-path "$HYTALE_DOWNLOADER_CREDENTIALS_PATH"
+      ) &
+      downloader_pid="$!"
+      echo "$downloader_pid" > "$HYTALE_DOWNLOADER_PID_FILE" 2>/dev/null || true
+      wait "$downloader_pid" || downloader_status="$?"
+      rm -f "$HYTALE_DOWNLOADER_PID_FILE" 2>/dev/null || true
+      sync_hytale_downloader_credentials || true
+
+      if [[ "$downloader_status" != "0" ]]; then
+        msg "Downloader failed (exit: ${downloader_status})."
+        msg "You can retry by creating ${HYTALE_TRIGGER_DOWNLOAD_FILE} or restarting with HYTALE_AUTO_DOWNLOAD=1."
+        sleep 3
+        continue
+      fi
+
+      if [[ ! -f "$game_zip" ]]; then
+        msg "Download completed but ${game_zip} was not created."
+        sleep 3
+        continue
+      fi
+
+      rm -rf "$extract_dir"
+      mkdir -p "$extract_dir"
+      if ! extract_hytale_archive "$game_zip" "$extract_dir"; then
+        msg "Extraction failed. You can unzip the archive manually and place the Server folder + Assets.zip into ${DATA_DIR}."
+        sleep 3
+        continue
+      fi
+
+      if ! bool_true "$HYTALE_KEEP_DOWNLOAD_ARCHIVE"; then
+        rm -rf "$extract_dir"
+        rm -f "$game_zip"
+      fi
+
+      msg "Hytale files ready:"
+      msg "- ${JAR_PATH}"
+      msg "- ${ASSETS_PATH}"
+
+      local latest_version=""
+      if latest_version="$(hytale_downloader_print_version 2>/dev/null)"; then
+        write_version_marker "$latest_version" || true
+      fi
+
+      continue
+    fi
+
+    if [[ "$warned" == "0" ]]; then
+      msg "Missing Hytale server files."
+      msg ""
+      msg "Expected:"
+      msg "- ${JAR_PATH}"
+      msg "- ${ASSETS_PATH}"
+      msg ""
+      msg "Options:"
+      msg "1) Auto-download: set HYTALE_AUTO_DOWNLOAD=1 and restart the container (recommended)."
+      msg "2) Trigger download (no restart): create ${HYTALE_TRIGGER_DOWNLOAD_FILE} (panel can do this)."
+      msg "3) Manual: copy the official Hytale Server folder and Assets.zip into ${DATA_DIR}."
+      msg ""
+      warned="1"
+    fi
+
+    sleep 2
+  done
+}
+
+auth_state_has_session_tokens() {
+  AUTH_STATE_PATH="$AUTH_STATE_PATH" python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+path = Path(os.environ.get("AUTH_STATE_PATH", ""))
+if not path.exists():
+  raise SystemExit(1)
+
+try:
+  state = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+  raise SystemExit(1)
+
+session = state.get("session") if isinstance(state.get("session"), dict) else {}
+session_token = str(session.get("sessionToken", "")).strip()
+identity_token = str(session.get("identityToken", "")).strip()
+
+raise SystemExit(0 if (session_token and identity_token) else 1)
+PY
+}
+
+wait_for_hytale_auth() {
+  if [[ "$HYTALE_AUTH_MODE" != "authenticated" ]]; then
+    return 0
+  fi
+
+  local warned="0"
+  while true; do
+    if [[ -n "${HYTALE_SERVER_SESSION_TOKEN:-}" && -n "${HYTALE_SERVER_IDENTITY_TOKEN:-}" ]]; then
+      return 0
+    fi
+    if auth_state_has_session_tokens 2>/dev/null; then
+      return 0
+    fi
+
+    if bool_true "$HYTALE_AUTH_AUTO" || [[ -f "$HYTALE_TRIGGER_AUTH_FILE" ]]; then
+      rm -f "$HYTALE_TRIGGER_AUTH_FILE" 2>/dev/null || true
+      warned="0"
+
+      msg "Ensuring Hytale authentication (device login may be required)..."
+      msg "If you have multiple profiles, set HYTALE_AUTH_PROFILE_UUID or HYTALE_AUTH_PROFILE_USERNAME."
+
+      auth_status=0
+      (
+        set -euo pipefail
+        /opt/hytale/hytale-auth --state-path "$AUTH_STATE_PATH" ensure --client-id "$HYTALE_AUTH_CLIENT_ID"
+      ) &
+      auth_pid="$!"
+      echo "$auth_pid" > "$HYTALE_AUTH_HELPER_PID_FILE" 2>/dev/null || true
+      wait "$auth_pid" || auth_status="$?"
+      rm -f "$HYTALE_AUTH_HELPER_PID_FILE" 2>/dev/null || true
+
+      if [[ "$auth_status" != "0" ]]; then
+        msg "Auth helper failed (exit: ${auth_status})."
+        msg "You can retry by creating ${HYTALE_TRIGGER_AUTH_FILE} or restarting with HYTALE_AUTH_AUTO=1."
+        sleep 3
+        continue
+      fi
+      continue
+    fi
+
+    if [[ "$warned" == "0" ]]; then
+      msg ""
+      msg "Hytale auth is not ready."
+      msg "Options:"
+      msg "1) Enable the built-in helper: set HYTALE_AUTH_AUTO=1 and restart."
+      msg "2) Trigger auth (no restart): create ${HYTALE_TRIGGER_AUTH_FILE} (panel can do this)."
+      msg ""
+      warned="1"
+    fi
+
+    sleep 2
   done
 }
 
@@ -628,7 +820,7 @@ ensure_hytale_files() {
 
   msg "Hytale files not found. Running hytale-downloader (patchline: ${HYTALE_PATCHLINE})..."
   msg "This will print a device-login URL + code. Complete it in your browser to start the download."
-  HOME="$DATA_DIR" XDG_CONFIG_HOME="$DATA_DIR/.config" /opt/hytale/hytale-downloader -patchline "$HYTALE_PATCHLINE" -download-path "$game_zip"
+  HOME="$DATA_DIR" XDG_CONFIG_HOME="$DATA_DIR/.config" /opt/hytale/hytale-downloader -patchline "$HYTALE_PATCHLINE" -download-path "$game_zip" -credentials-path "$HYTALE_DOWNLOADER_CREDENTIALS_PATH"
   sync_hytale_downloader_credentials || true
 
   if [[ ! -f "$game_zip" ]]; then
@@ -854,7 +1046,7 @@ maybe_auto_update_hytale_files() {
   mkdir -p "$DATA_DIR"
   cd "$DATA_DIR"
 
-  HOME="$DATA_DIR" XDG_CONFIG_HOME="$DATA_DIR/.config" /opt/hytale/hytale-downloader -patchline "$HYTALE_PATCHLINE" -download-path "$game_zip"
+  HOME="$DATA_DIR" XDG_CONFIG_HOME="$DATA_DIR/.config" /opt/hytale/hytale-downloader -patchline "$HYTALE_PATCHLINE" -download-path "$game_zip" -credentials-path "$HYTALE_DOWNLOADER_CREDENTIALS_PATH"
   sync_hytale_downloader_credentials || true
 
   if [[ ! -f "$game_zip" ]]; then
@@ -1004,6 +1196,7 @@ PY
 mkdir -p "$DATA_DIR"
 
 start_log_capture || true
+start_hytale_panel || true
 
 run_mode="${HYTALE_RUN_MODE,,}"
 if [[ "$run_mode" == "auth" ]]; then
@@ -1029,20 +1222,7 @@ if [[ "$HYTALE_CONSOLE_MODE" == "file" ]]; then
   fi
 fi
 
-if ! ensure_hytale_files; then
-  msg "Missing Hytale server files."
-  msg ""
-  msg "Expected:"
-  msg "- ${JAR_PATH}"
-  msg "- ${ASSETS_PATH}"
-  msg ""
-  msg "Options:"
-  msg "1) Auto-download (linux/amd64 only): set HYTALE_AUTO_DOWNLOAD=1 and restart the container."
-  msg "2) Manual: copy the official Hytale Server folder and Assets.zip into ${DATA_DIR}."
-  msg ""
-  msg "This container will now idle so you can populate ${DATA_DIR}."
-  idle_forever
-fi
+wait_for_hytale_files
 
 maybe_auto_update_hytale_files
 
@@ -1131,14 +1311,10 @@ prepare_cache_dirs
 
 sync_hytale_downloader_credentials || true
 
+wait_for_hytale_auth
+
 if ! ensure_hytale_auth; then
-  msg ""
-  msg "Hytale auth is not ready."
-  msg "Options:"
-  msg "1) Enable the built-in helper: set HYTALE_AUTH_AUTO=1 and restart."
-  msg "2) Use server console auth: echo '/auth login device' >> ${CONSOLE_FILE}"
-  msg ""
-  msg "This container will now idle so you can complete authentication."
+  msg "Auth state exists but session tokens could not be exported to env; idling."
   idle_forever
 fi
 

@@ -47,6 +47,7 @@ This image can run a lightweight web panel inside the same container to:
 - view basic server status
 - view the last N lines of logs
 - send console commands (writes to `HYTALE_CONSOLE_FILE`)
+- guide initial setup (trigger download/auth without restarting)
 
 Enable it with:
 
@@ -58,6 +59,15 @@ Enable it with:
 Then visit: `http://<host>:3000` and login via Basic Auth.
 
 Security note: this is an internet-facing panel on Flux. Always set a strong password.
+
+#### Setup buttons (recommended)
+
+When the panel is enabled, the container can be run in a “guided setup” mode:
+
+- **Start download** creates a trigger file so the entrypoint begins downloading the Hytale server files without needing a container restart.
+- **Start auth** creates a trigger file so the entrypoint runs the auth helper (and prints a device-login URL/code if required).
+
+Note: the official Hytale downloader itself may require a device-login step to download the server files. This image stores the downloader credentials under `/data` so the server auth step can reuse them (so you typically only authorize once).
 
 ### Option A: Auto-download (linux/amd64 only)
 
