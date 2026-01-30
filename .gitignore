@@ -1,2 +1,25 @@
 .DS_Store
+.tmp_dockerconfig/
+
+.env
+.env.*
+!.env.example
+
 *.log
+
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+
+# Common local persistent data folders
+**/serverdata/
+**/hytale-data/
+**/n8n-data/
+**/.n8n/
+**/starrupture-saves/
+**/sotf-config/
+**/sotf-data/
+
+# Common secret key filetypes (avoid accidental commits)
+*.pem
+*.key

@@ -1,0 +1,26 @@
+services:
+  data:
+    image: alpine:3.20
+    command: ["sh", "-lc", "while true; do sleep 3600; done"]
+    volumes:
+      - rust_data:/data
+
+  server:
+    build: .
+    image: littlestache/rust-flux:local
+    depends_on:
+      - data
+    env_file:
+      - .env
+    ports:
+      - "28015:28015/udp"
+      - "28016:28016/tcp"
+      - "28017:28017/udp"
+    volumes:
+      - rust_data:/data
+      - rust_config:/config
+
+volumes:
+  rust_data:
+  rust_config:
+
