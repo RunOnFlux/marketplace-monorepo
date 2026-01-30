@@ -28,6 +28,7 @@ DOWNLOADER_PID_FILE = Path(env_str("HYTALE_DOWNLOADER_PID_FILE", "/tmp/hytale-do
 AUTH_HELPER_PID_FILE = Path(env_str("HYTALE_AUTH_HELPER_PID_FILE", "/tmp/hytale-auth.pid"))
 TRIGGER_DOWNLOAD_FILE = Path(env_str("HYTALE_TRIGGER_DOWNLOAD_FILE", "/data/.hytale-flux.trigger-download"))
 TRIGGER_AUTH_FILE = Path(env_str("HYTALE_TRIGGER_AUTH_FILE", "/data/.hytale-flux.trigger-auth"))
+TRIGGER_RESTART_FILE = Path(env_str("HYTALE_TRIGGER_RESTART_FILE", "/data/.hytale-flux.trigger-restart"))
 DEVICE_STATUS_PATH = Path(env_str("HYTALE_DEVICE_STATUS_PATH", "/data/.hytale-flux.device.json"))
 
 AUTH_STATE_PATH = Path(env_str("HYTALE_AUTH_STATE_PATH", "/data/auth/state.json"))
@@ -289,6 +290,7 @@ def status_payload() -> dict[str, Any]:
         "setup": {
             "triggerDownloadPresent": TRIGGER_DOWNLOAD_FILE.exists(),
             "triggerAuthPresent": TRIGGER_AUTH_FILE.exists(),
+            "triggerRestartPresent": TRIGGER_RESTART_FILE.exists(),
             "downloaderRunning": is_pid_running(downloader_pid),
             "authHelperRunning": is_pid_running(auth_helper_pid),
             "device": device,
@@ -501,6 +503,21 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(f"Failed creating trigger: {exc}\n".encode("utf-8", errors="replace"))
+                return
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(b"OK\n")
+            return
+
+        if parsed.path == "/api/server/restart":
+            try:
+                TRIGGER_RESTART_FILE.write_text("1\n", encoding="utf-8")
+            except Exception as exc:
+                self.send_response(HTTPStatus.INTERNAL_SERVER_ERROR)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(f"Failed creating restart trigger: {exc}\n".encode("utf-8", errors="replace"))
                 return
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/plain; charset=utf-8")

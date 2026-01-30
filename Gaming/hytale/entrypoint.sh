@@ -26,6 +26,7 @@ HYTALE_UPDATE_SKIP_PATTERNS="${HYTALE_UPDATE_SKIP_PATTERNS:-universe/**,logs/**,
 HYTALE_DOWNLOADER_CREDENTIALS_PATH="${HYTALE_DOWNLOADER_CREDENTIALS_PATH:-${DATA_DIR}/.hytale-downloader-credentials.json}"
 HYTALE_TRIGGER_DOWNLOAD_FILE="${HYTALE_TRIGGER_DOWNLOAD_FILE:-${DATA_DIR}/.hytale-flux.trigger-download}"
 HYTALE_TRIGGER_AUTH_FILE="${HYTALE_TRIGGER_AUTH_FILE:-${DATA_DIR}/.hytale-flux.trigger-auth}"
+HYTALE_TRIGGER_RESTART_FILE="${HYTALE_TRIGGER_RESTART_FILE:-${DATA_DIR}/.hytale-flux.trigger-restart}"
 HYTALE_DEVICE_STATUS_PATH="${HYTALE_DEVICE_STATUS_PATH:-${DATA_DIR}/.hytale-flux.device.json}"
 HYTALE_DOWNLOADER_PID_FILE="${HYTALE_DOWNLOADER_PID_FILE:-/tmp/hytale-downloader.pid}"
 HYTALE_AUTH_HELPER_PID_FILE="${HYTALE_AUTH_HELPER_PID_FILE:-/tmp/hytale-auth.pid}"
@@ -183,6 +184,16 @@ stop_hytale_panel() {
     wait "$PANEL_PID" 2>/dev/null || true
   fi
   PANEL_PID=""
+}
+
+SERVER_FEEDER_PID=""
+
+stop_server_feeder() {
+  if [[ -n "${SERVER_FEEDER_PID:-}" ]]; then
+    kill -TERM "$SERVER_FEEDER_PID" 2>/dev/null || true
+    SERVER_FEEDER_PID=""
+  fi
+  rm -f /tmp/hytale.stdin 2>/dev/null || true
 }
 
 idle_forever() {
@@ -1700,9 +1711,21 @@ start_hytale_panel
 
 cd "$SERVER_DIR"
 
+HYTALE_SUPERVISE="${HYTALE_SUPERVISE:-}"
+if [[ -z "${HYTALE_SUPERVISE}" ]]; then
+  # If the web panel is enabled, keep the container alive and allow in-panel
+  # restarts (useful for applying mods/plugins without Flux UI access).
+  if bool_true "$HYTALE_PANEL_ENABLED"; then
+    HYTALE_SUPERVISE="1"
+  else
+    HYTALE_SUPERVISE="0"
+  fi
+fi
+
 server_pid=""
 cleanup() {
   rm -f "$HYTALE_SERVER_PID_FILE" 2>/dev/null || true
+  stop_server_feeder || true
   stop_hytale_panel
 }
 
@@ -1711,25 +1734,108 @@ forward_term() {
   if [[ -n "${server_pid:-}" ]]; then
     kill -TERM "$server_pid" 2>/dev/null || true
   fi
+  stop_server_feeder || true
 }
 
 trap forward_term TERM INT
 
-if [[ "$HYTALE_CONSOLE_MODE" == "file" ]]; then
-  startup_file="/tmp/hytale-startup.commands"
-  : > "$startup_file"
-  if [[ -n "${HYTALE_STARTUP_COMMANDS//[[:space:]]/}" ]]; then
-    if startup_rendered="$(render_startup_commands)"; then
-      printf '%s\n' "$startup_rendered" > "$startup_file"
+launch_hytale_server() {
+  stop_server_feeder || true
+
+  if [[ "$HYTALE_CONSOLE_MODE" == "file" ]]; then
+    startup_file="/tmp/hytale-startup.commands"
+    : > "$startup_file"
+    if [[ -n "${HYTALE_STARTUP_COMMANDS//[[:space:]]/}" ]]; then
+      if startup_rendered="$(render_startup_commands)"; then
+        printf '%s\n' "$startup_rendered" > "$startup_file"
+      fi
     fi
+
+    rm -f /tmp/hytale.stdin 2>/dev/null || true
+    mkfifo /tmp/hytale.stdin
+
+    ( cat "$startup_file"; tail -n 0 -F "$CONSOLE_FILE"; ) > /tmp/hytale.stdin &
+    SERVER_FEEDER_PID="$!"
+
+    java $JAVA_OPTS -jar "$JAR_PATH" "${args[@]}" < /tmp/hytale.stdin &
+  else
+    java $JAVA_OPTS -jar "$JAR_PATH" "${args[@]}" &
   fi
-  java $JAVA_OPTS -jar "$JAR_PATH" "${args[@]}" < <({ cat "$startup_file"; tail -n 0 -F "$CONSOLE_FILE"; }) &
-else
-  java $JAVA_OPTS -jar "$JAR_PATH" "${args[@]}" &
+
+  server_pid="$!"
+  echo "$server_pid" > "$HYTALE_SERVER_PID_FILE" 2>/dev/null || true
+}
+
+stop_hytale_server_gracefully() {
+  local timeout_s="${1:-25}"
+  if [[ -z "${server_pid:-}" ]]; then
+    return 0
+  fi
+  if ! kill -0 "$server_pid" 2>/dev/null; then
+    return 0
+  fi
+  kill -TERM "$server_pid" 2>/dev/null || true
+  for _ in $(seq 1 "$timeout_s"); do
+    if ! kill -0 "$server_pid" 2>/dev/null; then
+      return 0
+    fi
+    sleep 1
+  done
+  kill -KILL "$server_pid" 2>/dev/null || true
+  return 0
+}
+
+wait_for_server_or_restart() {
+  local exit_status="0"
+  while true; do
+    if [[ -f "$HYTALE_TRIGGER_RESTART_FILE" ]]; then
+      rm -f "$HYTALE_TRIGGER_RESTART_FILE" 2>/dev/null || true
+      msg "Restart requested from panel; restarting server..."
+      stop_hytale_server_gracefully 25 || true
+      wait "$server_pid" 2>/dev/null || true
+      rm -f "$HYTALE_SERVER_PID_FILE" 2>/dev/null || true
+      stop_server_feeder || true
+      return 100
+    fi
+
+    if ! kill -0 "$server_pid" 2>/dev/null; then
+      wait "$server_pid" 2>/dev/null || exit_status="$?"
+      rm -f "$HYTALE_SERVER_PID_FILE" 2>/dev/null || true
+      stop_server_feeder || true
+      return "$exit_status"
+    fi
+
+    sleep 1
+  done
+}
+
+if bool_true "$HYTALE_SUPERVISE"; then
+  while true; do
+    launch_hytale_server
+    status="0"
+    if wait_for_server_or_restart; then
+      status="0"
+    else
+      status="$?"
+    fi
+    if [[ "$status" == "100" ]]; then
+      continue
+    fi
+    if [[ "$status" == "0" ]]; then
+      msg "Server stopped. Waiting for a restart request from the panel..."
+      while [[ ! -f "$HYTALE_TRIGGER_RESTART_FILE" ]]; do
+        sleep 2
+      done
+      rm -f "$HYTALE_TRIGGER_RESTART_FILE" 2>/dev/null || true
+      continue
+    fi
+    msg "Server exited with status ${status}; exiting container so the orchestrator can restart it."
+    cleanup
+    exit "$status"
+  done
 fi
 
-server_pid="$!"
-echo "$server_pid" > "$HYTALE_SERVER_PID_FILE" 2>/dev/null || true
+launch_hytale_server
 
 server_status=0
 wait "$server_pid" || server_status="$?"

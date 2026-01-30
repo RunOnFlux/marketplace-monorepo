@@ -1649,6 +1649,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 Begin Setup
               </button>
+              <button class="btn-ghost" id="restartServerBtn" type="button" title="Restarts the Hytale server process (use after adding mods/plugins)">Restart Server</button>
               <button class="btn-ghost" id="downloadOnlyBtn" type="button" title="Download server files (uses existing auth if available)">Download Only</button>
               <button class="btn-ghost" id="authOnlyBtn" type="button" title="Run device authentication without downloading">Auth Only</button>
               <button class="btn-danger btn-sm" id="resetAuthBtn" type="button" title="Clear /data/auth/state.json">Reset Auth</button>
@@ -2312,6 +2313,18 @@
       }
     }
 
+    async function restartServer() {
+      if (!confirm("Restart the Hytale server process now? Players will be disconnected.")) return;
+      try {
+        await apiPost("/api/server/restart");
+        toast("Restart requested. Watch logs for the server to come back online.", "success");
+        await refreshStatus();
+        await refreshLogs();
+      } catch (err) {
+        // Error already toasted
+      }
+    }
+
     async function clearCommandQueue() {
       if (!confirm("Clear the command queue file?")) return;
       try {
@@ -2498,7 +2511,8 @@
         { name: "Device Link", desc: "Start device authentication", cmd: "/auth login device", confirm: "Start device auth on the server?", icon: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>' }
       ],
       advanced: [
-        { name: "Restart (Flux)", desc: "Restart the app/container from Flux UI (recommended)", action: "restart_help", badge: "Flux UI", icon: '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/>' }
+        { name: "Restart Server", desc: "Restart the Hytale server process (mods/plugins)", action: "server_restart", confirm: "Restart the server process now? Players will be disconnected.", badge: "Panel", icon: '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/>' },
+        { name: "Restart (Flux UI)", desc: "Use Flux UI to restart/redeploy the app", action: "restart_help", badge: "Flux UI", icon: '<path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15\"/>' }
       ]
     };
 
@@ -2543,6 +2557,17 @@
 
           btn.addEventListener("click", async function() {
             if (p.confirm && !confirm(p.confirm)) return;
+            if (p.action === "server_restart") {
+              try{
+                await apiPost("/api/server/restart");
+                toast("Restart requested. Watch logs for the server to come back online.", "success");
+                await refreshStatus();
+                await refreshLogs();
+              }catch(e){
+                // Error already toasted
+              }
+              return;
+            }
             if (p.action === "restart_help") {
               toast("Hytale has no /restart command. Restart the app/component from the Flux UI (or restart the container).", "info");
               return;
@@ -2588,6 +2613,7 @@
 
       // Setup buttons
       $("#beginSetupBtn").addEventListener("click", beginSetup);
+      $("#restartServerBtn").addEventListener("click", restartServer);
       $("#downloadOnlyBtn").addEventListener("click", triggerDownload);
       $("#authOnlyBtn").addEventListener("click", triggerAuth);
       $("#resetAuthBtn").addEventListener("click", resetAuth);
