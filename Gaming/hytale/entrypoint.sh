@@ -41,6 +41,14 @@ HYTALE_CONFIG_JSON_FILE="${HYTALE_CONFIG_JSON_FILE:-}"
 HYTALE_SERVER_NAME="${HYTALE_SERVER_NAME:-}"
 HYTALE_SERVER_NAME_CONFIG_KEY="${HYTALE_SERVER_NAME_CONFIG_KEY:-ServerName}"
 
+HYTALE_LOG_FILE="${HYTALE_LOG_FILE:-${DATA_DIR}/logs/hytale-server.log}"
+HYTALE_SERVER_PID_FILE="${HYTALE_SERVER_PID_FILE:-/tmp/hytale-server.pid}"
+
+HYTALE_PANEL_ENABLED="${HYTALE_PANEL_ENABLED:-0}"
+HYTALE_PANEL_BIND="${HYTALE_PANEL_BIND:-0.0.0.0:3000}"
+HYTALE_PANEL_USERNAME="${HYTALE_PANEL_USERNAME:-admin}"
+HYTALE_PANEL_PASSWORD="${HYTALE_PANEL_PASSWORD:-}"
+
 HYTALE_WHITELIST_PATH="${HYTALE_WHITELIST_PATH:-}"
 HYTALE_WHITELIST_MODE="${HYTALE_WHITELIST_MODE:-replace}"
 HYTALE_WHITELIST_ALLOW_CREATE="${HYTALE_WHITELIST_ALLOW_CREATE:-1}"
@@ -77,6 +85,30 @@ VERSION_MARKER_PATH="${HYTALE_VERSION_MARKER_PATH:-${DATA_DIR}/.hytale-flux.vers
 
 msg() { printf '%s\n' "$*"; }
 
+sync_hytale_downloader_credentials() {
+  local preferred="${DATA_DIR}/.hytale-downloader-credentials.json"
+  if [[ -s "$preferred" ]]; then
+    return 0
+  fi
+
+  local candidates=(
+    "/root/.hytale-downloader-credentials.json"
+    "${HOME:-}/.hytale-downloader-credentials.json"
+    "${DATA_DIR}/.config/hytale-downloader/credentials.json"
+  )
+
+  local candidate=""
+  for candidate in "${candidates[@]}"; do
+    if [[ -n "$candidate" && -s "$candidate" ]]; then
+      mkdir -p "$DATA_DIR"
+      cp -f "$candidate" "$preferred" || true
+      chmod 600 "$preferred" 2>/dev/null || true
+      return 0
+    fi
+  done
+  return 0
+}
+
 bool_true() {
   local value="${1:-}"
   value="${value,,}"
@@ -84,6 +116,53 @@ bool_true() {
     1|true|yes|y|on) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+PANEL_PID=""
+
+start_hytale_panel() {
+  if ! bool_true "$HYTALE_PANEL_ENABLED"; then
+    return 0
+  fi
+
+  if [[ -n "${PANEL_PID:-}" ]] && kill -0 "$PANEL_PID" 2>/dev/null; then
+    return 0
+  fi
+
+  if [[ -z "${HYTALE_PANEL_PASSWORD//[[:space:]]/}" ]]; then
+    msg "HYTALE_PANEL_ENABLED=1 requires HYTALE_PANEL_PASSWORD to be set."
+    return 1
+  fi
+
+  mkdir -p "$(dirname "$HYTALE_LOG_FILE")"
+  touch "$HYTALE_LOG_FILE"
+
+  export HYTALE_AUTH_STATE_PATH="$AUTH_STATE_PATH"
+  export HYTALE_CONSOLE_FILE="$CONSOLE_FILE"
+  export HYTALE_LOG_FILE="$HYTALE_LOG_FILE"
+  export HYTALE_SERVER_PID_FILE="$HYTALE_SERVER_PID_FILE"
+  export HYTALE_VERSION_MARKER_PATH="$VERSION_MARKER_PATH"
+
+  python3 /opt/hytale/panel.py &
+  PANEL_PID="$!"
+  msg "Admin panel enabled on ${HYTALE_PANEL_BIND} (Basic Auth: ${HYTALE_PANEL_USERNAME})."
+  return 0
+}
+
+stop_hytale_panel() {
+  if [[ -n "${PANEL_PID:-}" ]]; then
+    kill -TERM "$PANEL_PID" 2>/dev/null || true
+    wait "$PANEL_PID" 2>/dev/null || true
+  fi
+  PANEL_PID=""
+}
+
+idle_forever() {
+  start_hytale_panel || true
+  trap 'stop_hytale_panel; exit 0' TERM INT
+  while true; do
+    sleep 3600
+  done
 }
 
 require_int() {
@@ -530,7 +609,8 @@ ensure_hytale_files() {
 
   msg "Hytale files not found. Running hytale-downloader (patchline: ${HYTALE_PATCHLINE})..."
   msg "This will print a device-login URL + code. Complete it in your browser to start the download."
-  /opt/hytale/hytale-downloader -patchline "$HYTALE_PATCHLINE" -download-path "$game_zip"
+  HOME="$DATA_DIR" XDG_CONFIG_HOME="$DATA_DIR/.config" /opt/hytale/hytale-downloader -patchline "$HYTALE_PATCHLINE" -download-path "$game_zip"
+  sync_hytale_downloader_credentials || true
 
   if [[ ! -f "$game_zip" ]]; then
     msg "Download completed but ${game_zip} was not created."
@@ -669,7 +749,7 @@ hytale_downloader_print_version() {
     return 1
   fi
   local version_line=""
-  if version_line="$(/opt/hytale/hytale-downloader -patchline "$HYTALE_PATCHLINE" -print-version 2>/dev/null | head -n 1)"; then
+  if version_line="$(HOME="$DATA_DIR" XDG_CONFIG_HOME="$DATA_DIR/.config" /opt/hytale/hytale-downloader -patchline "$HYTALE_PATCHLINE" -print-version 2>/dev/null | head -n 1)"; then
     version_line="$(printf '%s' "$version_line" | tr -d '\r' | xargs || true)"
     if [[ -n "${version_line//[[:space:]]/}" ]]; then
       printf '%s' "$version_line"
@@ -755,7 +835,8 @@ maybe_auto_update_hytale_files() {
   mkdir -p "$DATA_DIR"
   cd "$DATA_DIR"
 
-  /opt/hytale/hytale-downloader -patchline "$HYTALE_PATCHLINE" -download-path "$game_zip"
+  HOME="$DATA_DIR" XDG_CONFIG_HOME="$DATA_DIR/.config" /opt/hytale/hytale-downloader -patchline "$HYTALE_PATCHLINE" -download-path "$game_zip"
+  sync_hytale_downloader_credentials || true
 
   if [[ ! -f "$game_zip" ]]; then
     msg "Auto-update completed but ${game_zip} was not created."
@@ -939,7 +1020,7 @@ if ! ensure_hytale_files; then
   msg "2) Manual: copy the official Hytale Server folder and Assets.zip into ${DATA_DIR}."
   msg ""
   msg "This container will now idle so you can populate ${DATA_DIR}."
-  exec sleep infinity
+  idle_forever
 fi
 
 maybe_auto_update_hytale_files
@@ -1027,6 +1108,8 @@ fi
 
 prepare_cache_dirs
 
+sync_hytale_downloader_credentials || true
+
 if ! ensure_hytale_auth; then
   msg ""
   msg "Hytale auth is not ready."
@@ -1035,7 +1118,7 @@ if ! ensure_hytale_auth; then
   msg "2) Use server console auth: echo '/auth login device' >> ${CONSOLE_FILE}"
   msg ""
   msg "This container will now idle so you can complete authentication."
-  exec sleep infinity
+  idle_forever
 fi
 
 msg "Starting Hytale server..."
@@ -1056,7 +1139,37 @@ if [[ "$HYTALE_CONSOLE_MODE" == "file" ]]; then
   msg ""
 fi
 
+start_hytale_panel
+
+stdout_fifo="/tmp/hytale-server.stdout"
+rm -f "$stdout_fifo"
+mkfifo "$stdout_fifo"
+
+tee -a "$HYTALE_LOG_FILE" < "$stdout_fifo" &
+tee_pid="$!"
+
 cd "$SERVER_DIR"
+
+server_pid=""
+cleanup() {
+  rm -f "$stdout_fifo" 2>/dev/null || true
+  rm -f "$HYTALE_SERVER_PID_FILE" 2>/dev/null || true
+  stop_hytale_panel
+  if [[ -n "${tee_pid:-}" ]]; then
+    kill -TERM "$tee_pid" 2>/dev/null || true
+    wait "$tee_pid" 2>/dev/null || true
+  fi
+}
+
+forward_term() {
+  msg "Received termination signal; stopping Hytale server..."
+  if [[ -n "${server_pid:-}" ]]; then
+    kill -TERM "$server_pid" 2>/dev/null || true
+  fi
+}
+
+trap forward_term TERM INT
+
 if [[ "$HYTALE_CONSOLE_MODE" == "file" ]]; then
   startup_file="/tmp/hytale-startup.commands"
   : > "$startup_file"
@@ -1065,7 +1178,15 @@ if [[ "$HYTALE_CONSOLE_MODE" == "file" ]]; then
       printf '%s\n' "$startup_rendered" > "$startup_file"
     fi
   fi
-  exec java $JAVA_OPTS -jar "$JAR_PATH" "${args[@]}" < <({ cat "$startup_file"; tail -n 0 -F "$CONSOLE_FILE"; })
+  java $JAVA_OPTS -jar "$JAR_PATH" "${args[@]}" < <({ cat "$startup_file"; tail -n 0 -F "$CONSOLE_FILE"; }) >"$stdout_fifo" 2>&1 &
 else
-  exec java $JAVA_OPTS -jar "$JAR_PATH" "${args[@]}"
+  java $JAVA_OPTS -jar "$JAR_PATH" "${args[@]}" >"$stdout_fifo" 2>&1 &
 fi
+
+server_pid="$!"
+echo "$server_pid" > "$HYTALE_SERVER_PID_FILE" 2>/dev/null || true
+
+server_status=0
+wait "$server_pid" || server_status="$?"
+cleanup
+exit "$server_status"

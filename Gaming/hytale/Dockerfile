@@ -22,8 +22,10 @@ RUN mkdir -p /opt/hytale \
 
 COPY entrypoint.sh /opt/hytale/entrypoint.sh
 COPY hytale-auth /opt/hytale/hytale-auth
+COPY panel.py /opt/hytale/panel.py
 RUN chmod +x /opt/hytale/entrypoint.sh
 RUN chmod +x /opt/hytale/hytale-auth
+RUN chmod +x /opt/hytale/panel.py
 
 ENV DATA_DIR="/data" \
   PYTHONUNBUFFERED="1" \
@@ -83,10 +85,17 @@ ENV DATA_DIR="/data" \
   HYTALE_PERMISSIONS_JSON="" \
   HYTALE_PERMISSIONS_JSON_B64="" \
   HYTALE_PERMISSIONS_JSON_FILE="" \
+  HYTALE_PANEL_ENABLED="0" \
+  HYTALE_PANEL_BIND="0.0.0.0:3000" \
+  HYTALE_PANEL_USERNAME="admin" \
+  HYTALE_PANEL_PASSWORD="" \
+  HYTALE_LOG_FILE="/data/logs/hytale-server.log" \
+  HYTALE_SERVER_PID_FILE="/tmp/hytale-server.pid" \
   JAVA_OPTS="-Xms1G -Xmx4G"
 
 VOLUME ["/data"]
 
 EXPOSE 5520/udp
+EXPOSE 3000/tcp
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/opt/hytale/entrypoint.sh"]

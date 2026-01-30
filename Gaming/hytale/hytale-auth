@@ -411,21 +411,42 @@ def force_device_flow(state: dict[str, Any]) -> None:
 
 def import_refresh_token_from_downloader_credentials() -> str | None:
     data_dir = os.environ.get("DATA_DIR", "/data")
-    credentials_path = Path(
-        os.environ.get(
-            "HYTALE_DOWNLOADER_CREDENTIALS_PATH",
-            str(Path(data_dir) / DEFAULT_DOWNLOADER_CREDENTIALS_FILENAME),
-        )
-    )
-    if not credentials_path.exists():
-        return None
-    try:
-        payload = json.loads(credentials_path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    token = find_refresh_token(payload)
-    if token and len(token) >= 10:
-        return token
+    explicit_path = os.environ.get("HYTALE_DOWNLOADER_CREDENTIALS_PATH", "").strip()
+
+    candidates: list[Path] = []
+    if explicit_path:
+        candidates.append(Path(explicit_path))
+
+    candidates.append(Path(data_dir) / DEFAULT_DOWNLOADER_CREDENTIALS_FILENAME)
+
+    home = os.environ.get("HOME", "").strip()
+    if home:
+        candidates.append(Path(home) / DEFAULT_DOWNLOADER_CREDENTIALS_FILENAME)
+
+    candidates.append(Path("/root") / DEFAULT_DOWNLOADER_CREDENTIALS_FILENAME)
+    candidates.append(Path(data_dir) / ".config" / "hytale-downloader" / "credentials.json")
+
+    seen: set[Path] = set()
+    for path in candidates:
+        try:
+            normalized = path.expanduser()
+        except Exception:
+            normalized = path
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+
+        if not normalized.exists():
+            continue
+
+        try:
+            payload = json.loads(normalized.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+
+        token = find_refresh_token(payload)
+        if token and len(token) >= 10:
+            return token
     return None
 
 

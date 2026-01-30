@@ -6,6 +6,7 @@ This folder contains a small wrapper image to run the **Hytale Dedicated Server*
 - Exposes UDP port `5520` by default (Hytale uses QUIC over UDP).
 - Supports a Flux-friendly authentication flow (OAuth device code) that can persist tokens under `/data/auth` for failover/restarts.
 - Provides a **file-based console input** so you can still trigger `/auth login device` without an interactive TTY.
+- Optional built-in **web admin panel** (Basic Auth) for sending console commands + viewing logs.
 
 This image does **not** bundle any Hytale server files. You must download them using the official tooling (or provide them yourself).
 
@@ -39,6 +40,25 @@ Create a persistent data directory:
 mkdir -p ./hytale-data
 ```
 
+### Optional: Web admin panel
+
+This image can run a lightweight web panel inside the same container to:
+
+- view basic server status
+- view the last N lines of logs
+- send console commands (writes to `HYTALE_CONSOLE_FILE`)
+
+Enable it with:
+
+- `HYTALE_PANEL_ENABLED=1`
+- `HYTALE_PANEL_PASSWORD=...` (required)
+- `HYTALE_PANEL_USERNAME=...` (default `admin`)
+- `HYTALE_PANEL_BIND=0.0.0.0:3000` (default)
+
+Then visit: `http://<host>:3000` and login via Basic Auth.
+
+Security note: this is an internet-facing panel on Flux. Always set a strong password.
+
 ### Option A: Auto-download (linux/amd64 only)
 
 The image includes the official `hytale-downloader` for **linux/amd64** builds. On first start it will print a device-login URL + code and wait for you to authorize in your browser.
@@ -46,8 +66,11 @@ The image includes the official `hytale-downloader` for **linux/amd64** builds. 
 ```bash
 docker run --rm -it \
   -p 5520:5520/udp \
+  -p 3000:3000/tcp \
   -v "$PWD/hytale-data:/data" \
   -e HYTALE_AUTO_DOWNLOAD=1 \
+  -e HYTALE_PANEL_ENABLED=1 \
+  -e HYTALE_PANEL_PASSWORD=test1234 \
   hytale-flux:local
 ```
 
@@ -98,6 +121,14 @@ Console input:
 - `HYTALE_CONSOLE_CLEAR_ON_START` (`1`/`0`, default `1`) clears `HYTALE_CONSOLE_FILE` at startup to avoid replaying old commands
 - `HYTALE_STARTUP_COMMANDS` (optional) sends startup console commands on container start (supports `\n` separators)
 - `HYTALE_STARTUP_COMMANDS_APPLY_MODE` (`once` or `always`, default `once`)
+
+Admin panel:
+
+- `HYTALE_PANEL_ENABLED` (`1`/`0`, default `0`)
+- `HYTALE_PANEL_BIND` (default: `0.0.0.0:3000`)
+- `HYTALE_PANEL_USERNAME` (default: `admin`)
+- `HYTALE_PANEL_PASSWORD` (**required** when enabled)
+- `HYTALE_LOG_FILE` (default: `/data/logs/hytale-server.log`) where the wrapper writes server stdout/stderr for the panel to read
 
 Downloader (optional):
 
@@ -211,13 +242,17 @@ Use `g:/data` so the world/config/auth state persists and is replicated to stand
   "name": "server",
   "description": "Hytale dedicated server",
   "repotag": "littlestache/hytale-flux:latest",
-  "ports": [5520],
-  "containerPorts": [5520],
-  "domains": [""],
+  "ports": [5520, 3000],
+  "containerPorts": [5520, 3000],
+  "domains": ["", ""],
   "environmentParameters": [
     "HYTALE_BIND=0.0.0.0:5520",
     "HYTALE_AUTH_MODE=authenticated",
     "HYTALE_AUTH_AUTO=1",
+    "HYTALE_PANEL_ENABLED=1",
+    "HYTALE_PANEL_BIND=0.0.0.0:3000",
+    "HYTALE_PANEL_USERNAME=admin",
+    "HYTALE_PANEL_PASSWORD=ChangeMe123!",
     "JAVA_OPTS=-Xms2G -Xmx6G"
   ],
   "commands": [],
