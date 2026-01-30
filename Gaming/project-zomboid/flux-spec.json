@@ -1,7 +1,7 @@
 {
   "version": 8,
   "name": "project-zomboid-flux",
-  "description": "Project Zomboid Dedicated Server (official via SteamCMD). Uses local /data for install/cache and synced g:/config for saves/config. Ports: 16261/udp and 16262/udp.",
+  "description": "Project Zomboid Dedicated Server (official via SteamCMD). Uses local /data for install/cache and synced g:/config for saves/config. Note: Flux blocks the default PZ ports, so this spec uses 27165/udp and 27166/udp.",
   "owner": "YOUR_ZELID_HERE",
   "compose": [
     {
@@ -28,17 +28,14 @@
       "description": "Project Zomboid server (g:/config for saves/config; local /data install)",
       "repotag": "littlestache/project-zomboid-flux:latest",
       "ports": [
-        16261,
-        16262,
-        27015
+        27165,
+        27166
       ],
       "containerPorts": [
-        16261,
-        16262,
-        27015
+        27165,
+        27166
       ],
       "domains": [
-        "",
         "",
         ""
       ],
@@ -52,14 +49,13 @@
         "PZ_PVP=false",
         "PZ_MAP=Muldraugh, KY",
         "PZ_SAVE_EVERY_MINUTES=10",
+        "PZ_PORT=27165",
+        "PZ_UDP_PORT=27166",
         "PZ_PASSWORD=",
         "PZ_ADMIN_USERNAME=admin",
         "PZ_ADMIN_PASSWORD=CHANGE_ME",
         "PZ_MODS=",
         "PZ_WORKSHOP_ITEMS=",
-        "PZ_RCON_ENABLED=false",
-        "PZ_RCON_PORT=27015",
-        "PZ_RCON_PASSWORD=",
         "PZ_JAVA_XMS=512m",
         "PZ_JAVA_XMX=2048m"
       ],
@@ -79,4 +75,3 @@
   "staticip": false,
   "enterprise": ""
 }
-

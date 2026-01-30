@@ -26,8 +26,10 @@ Default ports per PZWiki:
 - `16261/udp` — game port (clients connect here)
 - `16262/udp` — UDP RakNet port
 
-Optional:
-- `27015/tcp` — RCON (if enabled)
+### Flux port note (important)
+Flux blocks the default Project Zomboid ports (`16261-16262` are within a banned range), so the provided `flux-spec.json` uses:
+- `27165/udp` — game port
+- `27166/udp` — UDP port
 
 ## Persistence
 
@@ -90,4 +92,3 @@ The provided `flux-spec.json` is set to **3 instances** (Flux marketplace typica
 
 - If the server won’t start, check SteamCMD logs: `/data/steam/steamcmd.log`
 - If you see Java OOMs, increase `PZ_JAVA_XMX` and Flux RAM tier.
-
