@@ -26,7 +26,7 @@
     {
       "name": "server",
       "description": "Project Zomboid server (g:/config for saves/config; local /data install)",
-      "repotag": "littlestache/project-zomboid-flux:latest",
+      "repotag": "runonflux/project-zomboid-flux:latest",
       "ports": [
         27165,
         27166

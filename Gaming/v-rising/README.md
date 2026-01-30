@@ -35,7 +35,7 @@ docker run -d --name v-rising \
   -e VR_PASSWORD="test1234" \
   -v "$PWD/vrising-config:/config" \
   -v "$PWD/vrising-data:/data" \
-  littlestache/v-rising-flux:latest
+  runonflux/v-rising-flux:latest
 ```
 
 To join in-game:

@@ -26,7 +26,7 @@
     {
       "name": "server",
       "description": "Abiotic Factor server (g:/config for saves; local /data install)",
-      "repotag": "littlestache/abiotic-factor-flux:latest",
+      "repotag": "runonflux/abiotic-factor-flux:latest",
       "ports": [7777, 7778, 27015],
       "containerPorts": [7777, 7778, 27015],
       "domains": ["", "", ""],

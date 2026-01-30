@@ -15,10 +15,10 @@ This image does **not** bundle any Hytale server files. You must download them u
 Published image:
 
 ```bash
-docker pull littlestache/hytale-flux:latest
+docker pull runonflux/hytale-flux:latest
 ```
 
-Use `littlestache/hytale-flux:latest` as the `repotag` in Flux specs (or pin to a specific tag if you publish one).
+Use `runonflux/hytale-flux:latest` as the `repotag` in Flux specs (or pin to a specific tag if you publish one).
 
 ## Build (local)
 
@@ -251,7 +251,7 @@ Use `g:/data` so the world/config/auth state persists and is replicated to stand
 {
   "name": "server",
   "description": "Hytale dedicated server",
-  "repotag": "littlestache/hytale-flux:latest",
+  "repotag": "runonflux/hytale-flux:latest",
   "ports": [5520, 3000],
   "containerPorts": [5520, 3000],
   "domains": ["", ""],

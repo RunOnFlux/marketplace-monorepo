@@ -26,7 +26,7 @@
     {
       "name": "server",
       "description": "Sons of the Forest server (g:/config for saves; local /data install)",
-      "repotag": "littlestache/sons-of-the-forest-flux:latest",
+      "repotag": "runonflux/sons-of-the-forest-flux:latest",
       "ports": [8766, 27016, 9700],
       "containerPorts": [8766, 27016, 9700],
       "domains": ["", "", ""],

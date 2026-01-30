@@ -26,7 +26,7 @@
     {
       "name": "server",
       "description": "StarRupture server. Uses g:/saves for synced SaveGames + password tokens; uses /data for local Steam/Wine cache/install.",
-      "repotag": "littlestache/starrupture-flux:latest",
+      "repotag": "runonflux/starrupture-flux:latest",
       "ports": [
         7777,
         27015

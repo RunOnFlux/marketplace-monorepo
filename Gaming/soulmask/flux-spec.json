@@ -26,7 +26,7 @@
     {
       "name": "server",
       "description": "Soulmask server (g:/config for saves; local /data install)",
-      "repotag": "littlestache/soulmask-flux:latest",
+      "repotag": "runonflux/soulmask-flux:latest",
       "ports": [
         7777,
         27015,

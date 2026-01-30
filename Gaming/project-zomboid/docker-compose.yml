@@ -7,7 +7,7 @@ services:
 
   server:
     build: .
-    image: littlestache/project-zomboid-flux:local
+    image: runonflux/project-zomboid-flux:local
     depends_on:
       - data
     env_file:
@@ -24,4 +24,3 @@ services:
 volumes:
   pz_data:
   pz_config:
-

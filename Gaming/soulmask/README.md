@@ -42,7 +42,7 @@ docker run -d --name soulmask \
   -e SOULMASK_GAME_MODE="pve" \
   -v "$PWD/soulmask-config:/config" \
   -v "$PWD/soulmask-data:/data" \
-  littlestache/soulmask-flux:latest
+  runonflux/soulmask-flux:latest
 ```
 
 To join in-game:

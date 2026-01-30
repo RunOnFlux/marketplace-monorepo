@@ -26,7 +26,7 @@
     {
       "name": "server",
       "description": "Rust server (g:/config for saves/config; local /data install)",
-      "repotag": "littlestache/rust-flux:latest",
+      "repotag": "runonflux/rust-flux:latest",
       "ports": [
         28015,
         28016,
@@ -76,4 +76,3 @@
   "staticip": false,
   "enterprise": ""
 }
-

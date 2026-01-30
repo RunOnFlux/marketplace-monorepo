@@ -28,7 +28,7 @@ docker run -d --name terraria \
   -e TERRARIA_SERVER_PASSWORD="test1234" \
   -v "$PWD/terraria-config:/config" \
   -v "$PWD/terraria-data:/data" \
-  littlestache/terraria-flux:latest
+  runonflux/terraria-flux:latest
 ```
 
 To join in-game:

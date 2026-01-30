@@ -14,7 +14,7 @@
     {
       "name": "server",
       "description": "Hytale server",
-      "repotag": "littlestache/hytale-flux:latest",
+      "repotag": "runonflux/hytale-flux:latest",
       "repoauth": "",
       "ports": [5520, 3000],
       "containerPorts": [5520, 3000],

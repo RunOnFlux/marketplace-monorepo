@@ -33,7 +33,7 @@ docker run -d --name valheim \
   -e VALHEIM_PASSWORD="test1234" \
   -v "$PWD/valheim-config:/config" \
   -v "$PWD/valheim-data:/data" \
-  littlestache/valheim-flux:latest
+  runonflux/valheim-flux:latest
 ```
 
 To join in-game:
