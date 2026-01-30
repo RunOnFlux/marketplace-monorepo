@@ -5,6 +5,7 @@ import base64
 import cgi
 import json
 import os
+import re
 import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -58,15 +59,29 @@ def decode_basic_auth(header_value: str) -> tuple[str, str] | None:
     return username, password
 
 
-def tail_lines(path: Path, *, lines: int) -> str:
+def tail_lines(path: Path, *, lines: int, max_bytes: int = 4 * 1024 * 1024) -> str:
     try:
         if lines <= 0:
             return ""
-        data = path.read_text(encoding="utf-8", errors="replace")
-        parts = data.splitlines()
+        if not path.exists():
+            return ""
+
+        chunk_size = 64 * 1024
+        buf = b""
+        with path.open("rb") as f:
+            f.seek(0, os.SEEK_END)
+            pos = f.tell()
+            while pos > 0 and buf.count(b"\n") <= lines + 1:
+                read_size = chunk_size if pos >= chunk_size else pos
+                pos -= read_size
+                f.seek(pos, os.SEEK_SET)
+                buf = f.read(read_size) + buf
+                if len(buf) > max_bytes:
+                    break
+
+        text = buf.decode("utf-8", errors="replace")
+        parts = text.splitlines()
         return "\n".join(parts[-lines:]) + ("\n" if parts else "")
-    except FileNotFoundError:
-        return ""
     except Exception as exc:
         return f"[panel] Unable to read file: {exc}\n"
 
@@ -126,6 +141,68 @@ def safe_list_dir(path: Path, *, limit: int = 200) -> list[dict[str, Any]]:
         return []
 
 
+_RE_AUTH_CODE = re.compile(r"Authorization code:\s*([A-Z0-9-]+)", re.IGNORECASE)
+_RE_DEVICE_VERIFY = re.compile(r"(https?://\S+)", re.IGNORECASE)
+_RE_AUTH_HELPER_URL = re.compile(r"^\s*-\s*URL:\s*(https?://\S+)\s*$", re.IGNORECASE)
+_RE_AUTH_HELPER_CODE = re.compile(r"^\s*-\s*Code:\s*([A-Z0-9-]+)\s*$", re.IGNORECASE)
+_RE_USER_CODE_QUERY = re.compile(r"[?&]user_code=([A-Z0-9-]+)", re.IGNORECASE)
+
+
+def extract_device_auth_from_log(log_text: str) -> dict[str, Any] | None:
+    lines = log_text.splitlines()
+    device_url: str | None = None
+    device_code: str | None = None
+    source: str | None = None
+
+    for idx, line in enumerate(lines):
+        if "Please visit the following URL to authenticate" in line:
+            next_line = lines[idx + 1].strip() if idx + 1 < len(lines) else ""
+            match = _RE_DEVICE_VERIFY.search(next_line)
+            if match:
+                device_url = match.group(1).strip()
+                source = "downloader"
+            continue
+
+        match = _RE_AUTH_CODE.search(line)
+        if match:
+            device_code = match.group(1).strip()
+            source = source or "downloader"
+            continue
+
+        match = _RE_AUTH_HELPER_URL.match(line)
+        if match:
+            device_url = match.group(1).strip()
+            source = "auth-helper"
+            continue
+
+        match = _RE_AUTH_HELPER_CODE.match(line)
+        if match:
+            device_code = match.group(1).strip()
+            source = "auth-helper"
+            continue
+
+    if device_url and not device_code:
+        match = _RE_USER_CODE_QUERY.search(device_url)
+        if match:
+            device_code = match.group(1).strip()
+
+    if not device_url and not device_code:
+        return None
+
+    return {"url": device_url, "code": device_code, "source": source or "unknown"}
+
+
+def last_meaningful_log_line(log_text: str) -> str | None:
+    for line in reversed(log_text.splitlines()):
+        s = line.strip()
+        if not s:
+            continue
+        if s.startswith("[panel] Listening"):
+            continue
+        return s
+    return None
+
+
 def status_payload() -> dict[str, Any]:
     pid = server_pid()
     state = read_json_file(AUTH_STATE_PATH) or {}
@@ -138,6 +215,10 @@ def status_payload() -> dict[str, Any]:
 
     downloader_pid = read_int_file(DOWNLOADER_PID_FILE)
     auth_helper_pid = read_int_file(AUTH_HELPER_PID_FILE)
+
+    log_tail = tail_lines(LOG_FILE, lines=700)
+    device = extract_device_auth_from_log(log_tail)
+    last_hint = last_meaningful_log_line(log_tail)
 
     return {
         "time": int(time.time()),
@@ -166,6 +247,8 @@ def status_payload() -> dict[str, Any]:
             "triggerAuthPresent": TRIGGER_AUTH_FILE.exists(),
             "downloaderRunning": is_pid_running(downloader_pid),
             "authHelperRunning": is_pid_running(auth_helper_pid),
+            "device": device,
+            "lastHint": last_hint,
         },
         "paths": {
             "consoleFile": str(CONSOLE_FILE),
@@ -177,325 +260,29 @@ def status_payload() -> dict[str, Any]:
     }
 
 
-INDEX_HTML = """<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Hytale Server Panel</title>
-    <style>
-      :root { color-scheme: dark; }
-      body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; background: #0b1020; color: #e8eefc; }
-      header { padding: 18px 20px; background: linear-gradient(90deg, #0f1733, #0b1020); border-bottom: 1px solid #1c2a57; }
-      h1 { margin: 0; font-size: 16px; letter-spacing: 0.3px; }
-      main { padding: 16px 20px; max-width: 1100px; margin: 0 auto; }
-      .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
-      @media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
-      .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; }
-      .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-      .badge { display: inline-flex; padding: 2px 9px; border-radius: 999px; font-size: 12px; border: 1px solid rgba(255,255,255,0.15); }
-      .ok { background: rgba(34,197,94,0.13); border-color: rgba(34,197,94,0.4); }
-      .bad { background: rgba(239,68,68,0.13); border-color: rgba(239,68,68,0.4); }
-      .warn { background: rgba(234,179,8,0.13); border-color: rgba(234,179,8,0.4); }
-      code { background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 6px; }
-      input, button { background: rgba(255,255,255,0.06); color: #e8eefc; border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; padding: 10px 12px; }
-      input { width: min(720px, 100%); }
-      button { cursor: pointer; }
-      button:hover { background: rgba(255,255,255,0.09); }
-      pre { margin: 0; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; overflow: auto; max-height: 520px; }
-      .muted { color: rgba(232,238,252,0.72); }
-      .kv { display: grid; grid-template-columns: 140px 1fr; gap: 8px 12px; margin-top: 10px; }
-      .kv div { min-width: 0; }
-      .kv .k { color: rgba(232,238,252,0.75); }
-      .small { font-size: 12px; }
-    </style>
-  </head>
-  <body>
-    <header>
-      <div class="row">
-        <h1>Hytale Server Panel</h1>
-        <span id="statusBadge" class="badge">Loading…</span>
-      </div>
-      <div class="muted" style="margin-top: 6px;">This panel can send console commands and show logs. Keep it password-protected.</div>
-    </header>
-    <main>
-      <div class="grid">
-        <section class="card">
-          <div class="row" style="justify-content: space-between;">
-            <div>
-              <div class="muted">Setup</div>
-              <div class="small muted" style="margin-top: 4px;">Flow: download server files → authenticate → server starts.</div>
-            </div>
-            <button id="setupRefreshBtn" type="button">Refresh</button>
-          </div>
-          <div class="row" style="margin-top: 12px;">
-            <span id="filesBadge" class="badge">Files: …</span>
-            <button id="downloadBtn" type="button">Start download</button>
-            <span id="authBadge" class="badge">Auth: …</span>
-            <button id="authBtn" type="button">Start auth</button>
-          </div>
-          <div id="setupHint" class="muted" style="margin-top: 10px;"></div>
-        </section>
-
-        <section class="card">
-          <div class="row" style="justify-content: space-between;">
-            <div>
-              <div class="muted">Server status</div>
-              <div id="statusLine" style="margin-top: 4px;">Loading…</div>
-            </div>
-            <button id="refreshBtn" type="button">Refresh</button>
-          </div>
-          <div class="kv">
-            <div class="k">Bind</div><div><code id="bindVal"></code></div>
-            <div class="k">Auth mode</div><div><code id="authModeVal"></code></div>
-            <div class="k">Version</div><div><code id="versionVal"></code></div>
-            <div class="k">Console file</div><div><code id="consoleVal"></code></div>
-            <div class="k">Log file</div><div><code id="logVal"></code></div>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="muted">Send a console command</div>
-          <div class="row" style="margin-top: 10px;">
-            <input id="cmdInput" placeholder="/help" autocomplete="off" />
-            <button id="sendBtn" type="button">Send</button>
-          </div>
-          <div id="cmdResult" class="muted" style="margin-top: 10px;"></div>
-          <div class="muted" style="margin-top: 10px;">
-            Tip: commands are only processed when the server is running (they’re queued in the console file).
-          </div>
-        </section>
-      </div>
-
-      <section class="card" style="margin-top: 14px;">
-        <div class="row" style="justify-content: space-between;">
-          <div>
-            <div class="muted">Console queue</div>
-            <div class="muted" style="margin-top: 4px;">Last <code id="consoleLinesVal">20</code> lines written to the console file.</div>
-          </div>
-          <div class="row">
-            <button id="console20" type="button">20</button>
-            <button id="console100" type="button">100</button>
-          </div>
-        </div>
-        <pre id="consoleBox" style="margin-top: 12px;">Loading…</pre>
-      </section>
-
-      <section class="card" style="margin-top: 14px;">
-        <div class="row" style="justify-content: space-between;">
-          <div>
-            <div class="muted">Logs</div>
-            <div class="muted" style="margin-top: 4px;">Showing the last <code id="logLinesVal">250</code> lines.</div>
-          </div>
-          <div class="row">
-            <button id="log250" type="button">250</button>
-            <button id="log1000" type="button">1000</button>
-            <button id="log5000" type="button">5000</button>
-          </div>
-        </div>
-        <pre id="logBox" style="margin-top: 12px;">Loading…</pre>
-      </section>
-
-      <section class="card" style="margin-top: 14px;">
-        <div class="row" style="justify-content: space-between;">
-          <div>
-            <div class="muted">Mods / Plugins (experimental)</div>
-            <div class="muted" style="margin-top: 4px;">Manage files in <code>/data/Server/mods</code> and <code>/data/Server/plugins</code>.</div>
-          </div>
-          <button id="modsRefreshBtn" type="button">Refresh</button>
-        </div>
-        <div class="grid" style="margin-top: 12px;">
-          <div class="card">
-            <div class="muted">Mods</div>
-            <div id="modsList" class="muted small" style="margin-top: 8px;">Loading…</div>
-            <form id="modsUploadForm" style="margin-top: 10px;">
-              <input type="file" id="modsFile" />
-              <button type="submit" style="margin-top: 8px;">Upload to mods</button>
-            </form>
-          </div>
-          <div class="card">
-            <div class="muted">Plugins</div>
-            <div id="pluginsList" class="muted small" style="margin-top: 8px;">Loading…</div>
-            <form id="pluginsUploadForm" style="margin-top: 10px;">
-              <input type="file" id="pluginsFile" />
-              <button type="submit" style="margin-top: 8px;">Upload to plugins</button>
-            </form>
-          </div>
-        </div>
-      </section>
-    </main>
-    <script>
-      let logLines = 250;
-      let consoleLines = 20;
-
-      function el(id) { return document.getElementById(id); }
-      function setBadge(ok) {
-        const b = el("statusBadge");
-        b.classList.remove("ok", "bad");
-        if (ok) { b.classList.add("ok"); b.textContent = "Running"; }
-        else { b.classList.add("bad"); b.textContent = "Not running"; }
-      }
-
-      function setSetupBadges(s) {
-        const filesOk = !!(s.server && s.server.filesPresent);
-        const downloaderRunning = !!(s.setup && s.setup.downloaderRunning);
-        const authRunning = !!(s.setup && s.setup.authHelperRunning);
-        const authReady = !!(s.auth && s.auth.stateFilePresent);
-
-        const fb = el("filesBadge");
-        fb.classList.remove("ok", "bad", "warn");
-        if (filesOk) { fb.classList.add("ok"); fb.textContent = "Files: ready"; }
-        else if (downloaderRunning) { fb.classList.add("warn"); fb.textContent = "Files: downloading…"; }
-        else { fb.classList.add("bad"); fb.textContent = "Files: missing"; }
-
-        const ab = el("authBadge");
-        ab.classList.remove("ok", "bad", "warn");
-        if (authReady) { ab.classList.add("ok"); ab.textContent = "Auth: state present"; }
-        else if (authRunning) { ab.classList.add("warn"); ab.textContent = "Auth: in progress…"; }
-        else { ab.classList.add("bad"); ab.textContent = "Auth: not ready"; }
-
-        let hint = "";
-        if (!filesOk) {
-          hint = "Click “Start download”, then follow any device-login URL/code shown in Logs.";
-        } else if (!authReady && (s.server && s.server.authMode === "authenticated")) {
-          hint = "Click “Start auth” (device-login URL/code will appear in Logs).";
-        } else {
-          hint = "Setup looks OK. If the server isn’t running yet, check Logs for the next required action.";
-        }
-        el("setupHint").textContent = hint;
-      }
-
-      async function refreshStatus() {
-        const r = await fetch("/api/status");
-        if (!r.ok) throw new Error("status failed");
-        const s = await r.json();
-        const running = !!(s.server && s.server.running);
-        setBadge(running);
-        setSetupBadges(s);
-        el("statusLine").textContent = running ? `Server PID ${s.server.pid} is running` : "Server not running (or PID unknown)";
-        el("bindVal").textContent = s.server.bind || "";
-        el("authModeVal").textContent = s.server.authMode || "";
-        el("versionVal").textContent = s.server.version || "unknown";
-        el("consoleVal").textContent = (s.paths && s.paths.consoleFile) || "";
-        el("logVal").textContent = (s.paths && s.paths.logFile) || "";
-      }
-
-      async function refreshConsole() {
-        el("consoleLinesVal").textContent = String(consoleLines);
-        const r = await fetch(`/api/console?lines=${consoleLines}`);
-        if (!r.ok) throw new Error("console failed");
-        el("consoleBox").textContent = await r.text();
-        el("consoleBox").scrollTop = el("consoleBox").scrollHeight;
-      }
-
-      async function refreshLogs() {
-        el("logLinesVal").textContent = String(logLines);
-        const r = await fetch(`/api/log?lines=${logLines}`);
-        if (!r.ok) throw new Error("log failed");
-        el("logBox").textContent = await r.text();
-        el("logBox").scrollTop = el("logBox").scrollHeight;
-      }
-
-      async function sendCommand() {
-        const cmd = el("cmdInput").value || "";
-        el("cmdResult").textContent = "Sending…";
-        const r = await fetch("/api/command", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ command: cmd }),
-        });
-        const txt = await r.text();
-        if (r.ok) el("cmdResult").textContent = "OK: queued (see Console queue + Logs).";
-        else el("cmdResult").textContent = `Error: ${txt}`;
-      }
-
-      async function triggerDownload() {
-        el("setupHint").textContent = "Triggering download…";
-        const r = await fetch("/api/setup/download", { method: "POST" });
-        if (!r.ok) throw new Error("download trigger failed");
-        await refreshStatus();
-        await refreshLogs();
-      }
-
-      async function triggerAuth() {
-        el("setupHint").textContent = "Triggering auth…";
-        const r = await fetch("/api/setup/auth", { method: "POST" });
-        if (!r.ok) throw new Error("auth trigger failed");
-        await refreshStatus();
-        await refreshLogs();
-      }
-
-      async function refreshMods() {
-        const r1 = await fetch("/api/mods/list?kind=mods");
-        const r2 = await fetch("/api/mods/list?kind=plugins");
-        const mods = r1.ok ? await r1.json() : [];
-        const plugins = r2.ok ? await r2.json() : [];
-
-        el("modsList").innerHTML = mods.length ? mods.map(x => `<div><code>${x.name}</code> <span class="muted">(${x.size} bytes)</span> <button data-kind="mods" data-name="${encodeURIComponent(x.name)}">Delete</button></div>`).join("") : "<div class='muted'>No files found.</div>";
-        el("pluginsList").innerHTML = plugins.length ? plugins.map(x => `<div><code>${x.name}</code> <span class="muted">(${x.size} bytes)</span> <button data-kind="plugins" data-name="${encodeURIComponent(x.name)}">Delete</button></div>`).join("") : "<div class='muted'>No files found.</div>";
-
-        for (const btn of document.querySelectorAll("#modsList button, #pluginsList button")) {
-          btn.addEventListener("click", async () => {
-            const kind = btn.getAttribute("data-kind");
-            const name = btn.getAttribute("data-name");
-            if (!kind || !name) return;
-            if (!confirm("Delete this file?")) return;
-            await fetch(`/api/mods/delete?kind=${kind}&name=${name}`, { method: "POST" });
-            await refreshMods();
-          });
-        }
-      }
-
-      async function upload(kind, fileInputId) {
-        const fi = el(fileInputId);
-        const f = fi.files && fi.files[0];
-        if (!f) return;
-        const fd = new FormData();
-        fd.append("file", f);
-        const r = await fetch(`/api/mods/upload?kind=${kind}`, { method: "POST", body: fd });
-        if (!r.ok) { alert(await r.text()); return; }
-        fi.value = "";
-        await refreshMods();
-      }
-
-      el("refreshBtn").addEventListener("click", async () => {
-        try { await refreshStatus(); await refreshConsole(); await refreshLogs(); } catch (e) {}
-      });
-      el("sendBtn").addEventListener("click", async () => {
-        try { await sendCommand(); await refreshConsole(); await refreshLogs(); } catch (e) {}
-      });
-      el("cmdInput").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") el("sendBtn").click();
-      });
-      el("log250").addEventListener("click", async () => { logLines = 250; await refreshLogs(); });
-      el("log1000").addEventListener("click", async () => { logLines = 1000; await refreshLogs(); });
-      el("log5000").addEventListener("click", async () => { logLines = 5000; await refreshLogs(); });
-      el("console20").addEventListener("click", async () => { consoleLines = 20; await refreshConsole(); });
-      el("console100").addEventListener("click", async () => { consoleLines = 100; await refreshConsole(); });
-      el("setupRefreshBtn").addEventListener("click", async () => { try { await refreshStatus(); } catch (e) {} });
-      el("downloadBtn").addEventListener("click", async () => { try { await triggerDownload(); } catch (e) {} });
-      el("authBtn").addEventListener("click", async () => { try { await triggerAuth(); } catch (e) {} });
-      el("modsRefreshBtn").addEventListener("click", async () => { try { await refreshMods(); } catch (e) {} });
-      el("modsUploadForm").addEventListener("submit", async (e) => { e.preventDefault(); await upload("mods", "modsFile"); });
-      el("pluginsUploadForm").addEventListener("submit", async (e) => { e.preventDefault(); await upload("plugins", "pluginsFile"); });
-
-      (async () => {
-        try { await refreshStatus(); } catch (e) { setBadge(false); }
-        try { await refreshConsole(); } catch (e) { el("consoleBox").textContent = "Unable to load console queue."; }
-        try { await refreshLogs(); } catch (e) { el("logBox").textContent = "Unable to load logs."; }
-        try { await refreshMods(); } catch (e) {}
-        setInterval(async () => { try { await refreshStatus(); } catch (e) {} }, 5000);
-        setInterval(async () => { try { await refreshConsole(); } catch (e) {} }, 7000);
-        setInterval(async () => { try { await refreshLogs(); } catch (e) {} }, 10000);
-      })();
-    </script>
-  </body>
-</html>
+def load_index_html() -> str:
+    html_path = Path(__file__).with_name("panel.html")
+    try:
+        return html_path.read_text(encoding="utf-8", errors="replace")
+    except Exception as exc:
+        msg = f"Unable to load {html_path}: {exc}"
+        return f"""<!doctype html>
+<html><head><meta charset="utf-8"><title>Hytale Panel</title></head>
+<body style="font-family: system-ui; background:#0b1020; color:#e8eefc; padding:18px;">
+<h1>Hytale Panel</h1>
+<p>{msg}</p>
+</body></html>
 """
 
 
+INDEX_HTML = load_index_html()
+
+
 class Handler(BaseHTTPRequestHandler):
-    server_version = "HytalePanel/1.0"
+    server_version = "FluxHytalePanel/2.0"
+
+    def log_message(self, fmt: str, *args: Any) -> None:
+        return
 
     def _unauthorized(self) -> None:
         self.send_response(HTTPStatus.UNAUTHORIZED)
@@ -516,9 +303,6 @@ class Handler(BaseHTTPRequestHandler):
             self._unauthorized()
             return False
         return True
-
-    def log_message(self, fmt: str, *args: Any) -> None:
-        return
 
     def do_GET(self) -> None:
         if not self._require_auth():
@@ -545,11 +329,11 @@ class Handler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/log":
             qs = parse_qs(parsed.query)
-            lines_raw = (qs.get("lines") or ["250"])[0]
+            lines_raw = (qs.get("lines") or ["400"])[0]
             try:
                 lines = max(1, min(int(lines_raw, 10), 20000))
             except Exception:
-                lines = 250
+                lines = 400
             body = tail_lines(LOG_FILE, lines=lines).encode("utf-8", errors="replace")
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
@@ -560,11 +344,11 @@ class Handler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/console":
             qs = parse_qs(parsed.query)
-            lines_raw = (qs.get("lines") or ["20"])[0]
+            lines_raw = (qs.get("lines") or ["30"])[0]
             try:
                 lines = max(1, min(int(lines_raw, 10), 2000))
             except Exception:
-                lines = 20
+                lines = 30
             body = tail_lines(CONSOLE_FILE, lines=lines).encode("utf-8", errors="replace")
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
@@ -594,6 +378,7 @@ class Handler(BaseHTTPRequestHandler):
         if not self._require_auth():
             return
         parsed = urlparse(self.path)
+
         if parsed.path == "/api/command":
             length = int(self.headers.get("Content-Length", "0") or "0")
             raw = self.rfile.read(length) if length > 0 else b""
@@ -624,6 +409,13 @@ class Handler(BaseHTTPRequestHandler):
                 CONSOLE_FILE.parent.mkdir(parents=True, exist_ok=True)
                 with CONSOLE_FILE.open("a", encoding="utf-8") as f:
                     f.write(cmd + "\n")
+                try:
+                    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+                    with LOG_FILE.open("a", encoding="utf-8") as lf:
+                        ts = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+                        lf.write(f"[panel] {ts} queued command: {cmd}\n")
+                except Exception:
+                    pass
             except Exception as exc:
                 self.send_response(HTTPStatus.INTERNAL_SERVER_ERROR)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
@@ -660,6 +452,38 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(f"Failed creating trigger: {exc}\n".encode("utf-8", errors="replace"))
+                return
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(b"OK\n")
+            return
+
+        if parsed.path == "/api/setup/reset-auth":
+            try:
+                if AUTH_STATE_PATH.exists():
+                    AUTH_STATE_PATH.unlink()
+            except Exception as exc:
+                self.send_response(HTTPStatus.INTERNAL_SERVER_ERROR)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(f"Failed clearing auth state: {exc}\n".encode("utf-8", errors="replace"))
+                return
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(b"OK\n")
+            return
+
+        if parsed.path == "/api/console/clear":
+            try:
+                CONSOLE_FILE.parent.mkdir(parents=True, exist_ok=True)
+                CONSOLE_FILE.write_text("", encoding="utf-8")
+            except Exception as exc:
+                self.send_response(HTTPStatus.INTERNAL_SERVER_ERROR)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(f"Failed clearing console file: {exc}\n".encode("utf-8", errors="replace"))
                 return
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
@@ -772,7 +596,6 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.end_headers()
         self.wfile.write(b"Not found\n")
-        return
 
 
 def parse_bind(bind: str) -> tuple[str, int]:
@@ -800,3 +623,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

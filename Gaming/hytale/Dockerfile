@@ -23,6 +23,7 @@ RUN mkdir -p /opt/hytale \
 COPY entrypoint.sh /opt/hytale/entrypoint.sh
 COPY hytale-auth /opt/hytale/hytale-auth
 COPY panel.py /opt/hytale/panel.py
+COPY panel.html /opt/hytale/panel.html
 RUN chmod +x /opt/hytale/entrypoint.sh
 RUN chmod +x /opt/hytale/hytale-auth
 RUN chmod +x /opt/hytale/panel.py
