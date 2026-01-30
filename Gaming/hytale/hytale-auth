@@ -29,6 +29,7 @@ DEFAULT_USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/120.0.0.0 Safari/537.36"
 )
+DEFAULT_DEVICE_STATUS_PATH = "/data/.hytale-flux.device.json"
 
 
 class FatalError(Exception):
@@ -96,6 +97,33 @@ def redact(token: str, keep_prefix: int = 6, keep_suffix: int = 4) -> str:
     if len(token) <= keep_prefix + keep_suffix:
         return "<redacted>"
     return f"{token[:keep_prefix]}…{token[-keep_suffix:]}"
+
+def device_status_path() -> Path | None:
+    raw = str(os.environ.get("HYTALE_DEVICE_STATUS_PATH", "")).strip()
+    if not raw:
+        return None
+    return Path(raw)
+
+
+def write_device_status(payload: dict[str, Any]) -> None:
+    path = device_status_path()
+    if not path:
+        return
+    try:
+        write_json_atomic(path, payload)
+    except Exception:
+        pass
+
+
+def clear_device_status() -> None:
+    path = device_status_path()
+    if not path:
+        return
+    try:
+        if path.exists():
+            path.unlink()
+    except Exception:
+        pass
 
 
 @dataclass(frozen=True)
@@ -372,6 +400,17 @@ def ensure_access_token(state: dict[str, Any], *, client_id: str, allow_device_f
     print(f"- Expires in: {expires_in} seconds")
     print("")
 
+    expires_at = utc_now() + dt.timedelta(seconds=max(1, expires_in))
+    write_device_status(
+        {
+            "required": True,
+            "url": verification,
+            "code": user_code or None,
+            "expiresAt": format_iso8601(expires_at),
+            "clientId": client_id,
+        }
+    )
+
     tokens = oauth_poll_token(client_id, device_code, interval, expires_in)
     oauth["access_token"] = tokens["access_token"]
     oauth["refresh_token"] = tokens.get("refresh_token", oauth.get("refresh_token"))
@@ -383,6 +422,7 @@ def ensure_access_token(state: dict[str, Any], *, client_id: str, allow_device_f
     if not str(oauth.get("refresh_token", "")).strip():
         raise FatalError("OAuth device flow succeeded but did not return a refresh_token.")
 
+    clear_device_status()
     return str(oauth["access_token"])
 
 
@@ -556,6 +596,7 @@ def cmd_status(state_path: Path) -> int:
 def cmd_logout(state_path: Path) -> int:
     if state_path.exists():
         state_path.unlink()
+    clear_device_status()
     print(f"Cleared auth state: {state_path}")
     return 0
 
@@ -587,6 +628,7 @@ def cmd_ensure(args: argparse.Namespace, state_path: Path) -> int:
             raise
 
     write_json_atomic(state_path, state)
+    clear_device_status()
 
     print("Auth ready.")
     print(f"- profile: {profile.get('username','')} ({profile['uuid']})")
@@ -631,6 +673,7 @@ def main(argv: list[str]) -> int:
     data_dir = os.environ.get("DATA_DIR", "/data")
     default_state_dir = Path(os.environ.get("HYTALE_AUTH_STATE_DIR", str(Path(data_dir) / "auth")))
     state_path = default_state_dir / "state.json"
+    os.environ.setdefault("HYTALE_DEVICE_STATUS_PATH", DEFAULT_DEVICE_STATUS_PATH)
 
     parser = argparse.ArgumentParser(prog="hytale-auth", description="Hytale OAuth/session helper for headless environments.")
     parser.add_argument("--state-path", default=str(state_path), help="Path to auth state JSON (default: /data/auth/state.json)")

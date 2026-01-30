@@ -26,6 +26,7 @@ HYTALE_UPDATE_SKIP_PATTERNS="${HYTALE_UPDATE_SKIP_PATTERNS:-universe/**,logs/**,
 HYTALE_DOWNLOADER_CREDENTIALS_PATH="${HYTALE_DOWNLOADER_CREDENTIALS_PATH:-${DATA_DIR}/.hytale-downloader-credentials.json}"
 HYTALE_TRIGGER_DOWNLOAD_FILE="${HYTALE_TRIGGER_DOWNLOAD_FILE:-${DATA_DIR}/.hytale-flux.trigger-download}"
 HYTALE_TRIGGER_AUTH_FILE="${HYTALE_TRIGGER_AUTH_FILE:-${DATA_DIR}/.hytale-flux.trigger-auth}"
+HYTALE_DEVICE_STATUS_PATH="${HYTALE_DEVICE_STATUS_PATH:-${DATA_DIR}/.hytale-flux.device.json}"
 HYTALE_DOWNLOADER_PID_FILE="${HYTALE_DOWNLOADER_PID_FILE:-/tmp/hytale-downloader.pid}"
 HYTALE_AUTH_HELPER_PID_FILE="${HYTALE_AUTH_HELPER_PID_FILE:-/tmp/hytale-auth.pid}"
 HYTALE_CONSOLE_MODE="${HYTALE_CONSOLE_MODE:-file}"
@@ -202,7 +203,7 @@ wait_for_hytale_files() {
       warned="0"
 
       msg "Downloading Hytale server files (patchline: ${HYTALE_PATCHLINE})..."
-      msg "If this is the first run, a device-login URL + code will appear in logs. Complete it in your browser."
+      msg "This requires a one-time device login (shown in logs). After that, downloads/updates should be seamless."
 
       local game_zip="${DATA_DIR}/game.zip"
       local extract_dir="${DATA_DIR}/.extract"
@@ -227,30 +228,134 @@ wait_for_hytale_files() {
         msg "Existing archive extraction failed; re-downloading..."
       fi
 
+      msg "Ensuring Hytale authentication (needed for downloads)..."
+      auth_status=0
+      (
+        set -euo pipefail
+        /opt/hytale/hytale-auth --state-path "$AUTH_STATE_PATH" ensure --client-id "$HYTALE_AUTH_CLIENT_ID"
+      ) &
+      auth_pid="$!"
+      echo "$auth_pid" > "$HYTALE_AUTH_HELPER_PID_FILE" 2>/dev/null || true
+      wait "$auth_pid" || auth_status="$?"
+      rm -f "$HYTALE_AUTH_HELPER_PID_FILE" 2>/dev/null || true
+
+      if [[ "$auth_status" != "0" ]]; then
+        msg "Auth helper failed (exit: ${auth_status})."
+        msg "You can retry by triggering setup again from the panel."
+        sleep 3
+        continue
+      fi
+
+      msg "Fetching download metadata..."
+      meta_out="$(AUTH_STATE_PATH="$AUTH_STATE_PATH" PATCHLINE="$HYTALE_PATCHLINE" python3 - <<'PY'
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+
+UA = (
+  "Mozilla/5.0 (X11; Linux x86_64) "
+  "AppleWebKit/537.36 (KHTML, like Gecko) "
+  "Chrome/120.0.0.0 Safari/537.36"
+)
+
+patchline = os.environ.get("PATCHLINE", "release").strip() or "release"
+state_path = os.environ.get("AUTH_STATE_PATH", "").strip()
+if not state_path:
+  print("Missing AUTH_STATE_PATH", file=sys.stderr)
+  raise SystemExit(1)
+
+try:
+  state = json.loads(open(state_path, "r", encoding="utf-8").read())
+except Exception as exc:
+  print(f"Unable to read auth state: {exc}", file=sys.stderr)
+  raise SystemExit(1)
+
+token = str((state.get("oauth") or {}).get("access_token", "")).strip()
+if not token:
+  print("Auth state missing access_token", file=sys.stderr)
+  raise SystemExit(1)
+
+meta_url = f"https://account-data.hytale.com/game-assets/version/{patchline}.json"
+req = urllib.request.Request(
+  meta_url,
+  headers={"Authorization": f"Bearer {token}", "User-Agent": UA, "Accept": "application/json"},
+  method="GET",
+)
+try:
+  with urllib.request.urlopen(req, timeout=25) as resp:
+    first = json.loads(resp.read().decode("utf-8", errors="replace"))
+except urllib.error.HTTPError as e:
+  body = e.read().decode("utf-8", errors="replace")
+  print(f"Metadata request failed (HTTP {e.code}): {body[:200]}", file=sys.stderr)
+  raise SystemExit(1)
+
+signed = str(first.get("url") or "").strip()
+if not signed:
+  print(f"Metadata response missing url: {first}", file=sys.stderr)
+  raise SystemExit(1)
+
+req2 = urllib.request.Request(signed, headers={"User-Agent": UA, "Accept": "application/json"}, method="GET")
+with urllib.request.urlopen(req2, timeout=25) as resp:
+  second = json.loads(resp.read().decode("utf-8", errors="replace"))
+
+version = str(second.get("version") or "").strip()
+sha = str(second.get("sha256") or "").strip().lower()
+download_url = str(second.get("download_url") or "").strip()
+if not version or not sha or not download_url:
+  print(f"Unexpected metadata payload: {second}", file=sys.stderr)
+  raise SystemExit(1)
+
+print(version)
+print(sha)
+print(download_url)
+PY
+)" || meta_out=""
+
+      version="$(printf '%s\n' "$meta_out" | sed -n '1p' | tr -d '\r' | xargs || true)"
+      sha256="$(printf '%s\n' "$meta_out" | sed -n '2p' | tr -d '\r' | xargs || true)"
+      download_url="$(printf '%s\n' "$meta_out" | sed -n '3p' | tr -d '\r' | xargs || true)"
+
+      if [[ -z "${version//[[:space:]]/}" || -z "${sha256//[[:space:]]/}" || -z "${download_url//[[:space:]]/}" ]]; then
+        msg "Failed to fetch download metadata."
+        sleep 3
+        continue
+      fi
+
+      msg "Latest version: ${version}"
+      msg "Downloading game bundle to ${game_zip}..."
       downloader_status=0
       (
         set -euo pipefail
-        HOME="$DATA_DIR" XDG_CONFIG_HOME="$DATA_DIR/.config" \
-          /opt/hytale/hytale-downloader \
-          -patchline "$HYTALE_PATCHLINE" \
-          -download-path "$game_zip" \
-          -credentials-path "$HYTALE_DOWNLOADER_CREDENTIALS_PATH"
+        curl_args=(-fL --retry 5 --retry-delay 2 --retry-connrefused)
+        if [[ -f "$game_zip" ]]; then
+          curl_args+=(-C -)
+        fi
+        curl "${curl_args[@]}" -o "$game_zip" "$download_url"
       ) &
       downloader_pid="$!"
       echo "$downloader_pid" > "$HYTALE_DOWNLOADER_PID_FILE" 2>/dev/null || true
       wait "$downloader_pid" || downloader_status="$?"
       rm -f "$HYTALE_DOWNLOADER_PID_FILE" 2>/dev/null || true
-      sync_hytale_downloader_credentials || true
 
       if [[ "$downloader_status" != "0" ]]; then
-        msg "Downloader failed (exit: ${downloader_status})."
-        msg "You can retry by creating ${HYTALE_TRIGGER_DOWNLOAD_FILE} or restarting with HYTALE_AUTO_DOWNLOAD=1."
+        msg "Download failed (exit: ${downloader_status})."
+        msg "You can retry by triggering setup again from the panel."
         sleep 3
         continue
       fi
 
       if [[ ! -f "$game_zip" ]]; then
         msg "Download completed but ${game_zip} was not created."
+        sleep 3
+        continue
+      fi
+
+      msg "Validating checksum..."
+      if ! printf '%s  %s\n' "$sha256" "$game_zip" | sha256sum -c - >/dev/null 2>&1; then
+        msg "Checksum mismatch for ${game_zip}. Re-try the download."
+        rm -f "$game_zip" 2>/dev/null || true
         sleep 3
         continue
       fi
@@ -272,10 +377,7 @@ wait_for_hytale_files() {
       msg "- ${JAR_PATH}"
       msg "- ${ASSETS_PATH}"
 
-      local latest_version=""
-      if latest_version="$(hytale_downloader_print_version 2>/dev/null)"; then
-        write_version_marker "$latest_version" || true
-      fi
+      write_version_marker "$version" || true
 
       continue
     fi
@@ -288,7 +390,7 @@ wait_for_hytale_files() {
       msg "- ${ASSETS_PATH}"
       msg ""
       msg "Options:"
-      msg "1) Auto-download: set HYTALE_AUTO_DOWNLOAD=1 and restart the container (recommended)."
+      msg "1) Begin setup from the panel (recommended) to authenticate once and download automatically."
       msg "2) Trigger download (no restart): create ${HYTALE_TRIGGER_DOWNLOAD_FILE} (panel can do this)."
       msg "3) Manual: copy the official Hytale Server folder and Assets.zip into ${DATA_DIR}."
       msg ""
@@ -322,6 +424,27 @@ raise SystemExit(0 if (session_token and identity_token) else 1)
 PY
 }
 
+auth_state_has_refresh_token() {
+  AUTH_STATE_PATH="$AUTH_STATE_PATH" python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+path = Path(os.environ.get("AUTH_STATE_PATH", ""))
+if not path.exists():
+  raise SystemExit(1)
+
+try:
+  state = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+  raise SystemExit(1)
+
+oauth = state.get("oauth") if isinstance(state.get("oauth"), dict) else {}
+refresh_token = str(oauth.get("refresh_token", "")).strip()
+raise SystemExit(0 if refresh_token else 1)
+PY
+}
+
 wait_for_hytale_auth() {
   if [[ "$HYTALE_AUTH_MODE" != "authenticated" ]]; then
     return 0
@@ -330,10 +453,34 @@ wait_for_hytale_auth() {
   local warned="0"
   while true; do
     if [[ -n "${HYTALE_SERVER_SESSION_TOKEN:-}" && -n "${HYTALE_SERVER_IDENTITY_TOKEN:-}" ]]; then
+      rm -f "$HYTALE_TRIGGER_AUTH_FILE" 2>/dev/null || true
       return 0
     fi
     if auth_state_has_session_tokens 2>/dev/null; then
+      rm -f "$HYTALE_TRIGGER_AUTH_FILE" 2>/dev/null || true
       return 0
+    fi
+
+    # If we already have a refresh token (e.g. from the download step), we can
+    # create/refresh the game-session tokens without another device login.
+    if auth_state_has_refresh_token 2>/dev/null; then
+      warned="0"
+
+      auth_status=0
+      (
+        set -euo pipefail
+        /opt/hytale/hytale-auth --state-path "$AUTH_STATE_PATH" ensure --client-id "$HYTALE_AUTH_CLIENT_ID" --non-interactive
+      ) &
+      auth_pid="$!"
+      echo "$auth_pid" > "$HYTALE_AUTH_HELPER_PID_FILE" 2>/dev/null || true
+      wait "$auth_pid" || auth_status="$?"
+      rm -f "$HYTALE_AUTH_HELPER_PID_FILE" 2>/dev/null || true
+
+      if [[ "$auth_status" != "0" ]]; then
+        msg "Auth refresh failed (exit: ${auth_status}). You may need to reset auth and re-authorize."
+        sleep 3
+      fi
+      continue
     fi
 
     if bool_true "$HYTALE_AUTH_AUTO" || [[ -f "$HYTALE_TRIGGER_AUTH_FILE" ]]; then
@@ -783,24 +930,8 @@ ensure_hytale_files() {
     return 1
   fi
 
-  if [[ ! -x /opt/hytale/hytale-downloader ]]; then
-    msg "HYTALE_AUTO_DOWNLOAD=1 is set, but hytale-downloader is not available in this image."
-    msg "Place the Hytale Server files manually under ${DATA_DIR}/Server and ${DATA_DIR}/Assets.zip."
-    return 1
-  fi
-
-  if [[ "$(uname -m)" != "x86_64" && "$(uname -m)" != "amd64" ]]; then
-    msg "HYTALE_AUTO_DOWNLOAD=1 is set, but hytale-downloader is only bundled for linux/amd64."
-    msg "Place the Hytale Server files manually under ${DATA_DIR}/Server and ${DATA_DIR}/Assets.zip."
-    return 1
-  fi
-
   local game_zip="${DATA_DIR}/game.zip"
   local extract_dir="${DATA_DIR}/.extract"
-
-  local zip_layout=""
-  local asset_entry=""
-  local server_prefix=""
 
   mkdir -p "$DATA_DIR"
   cd "$DATA_DIR"
@@ -810,21 +941,104 @@ ensure_hytale_files() {
     rm -rf "$extract_dir"
     mkdir -p "$extract_dir"
     if extract_hytale_archive "$game_zip" "$extract_dir"; then
-      if latest_version="$(hytale_downloader_print_version 2>/dev/null)"; then
-        write_version_marker "$latest_version" || true
-      fi
+      msg "Hytale files ready:"
+      msg "- ${JAR_PATH}"
+      msg "- ${ASSETS_PATH}"
       return 0
     fi
     msg "Existing archive extraction failed; re-downloading..."
   fi
 
-  msg "Hytale files not found. Running hytale-downloader (patchline: ${HYTALE_PATCHLINE})..."
-  msg "This will print a device-login URL + code. Complete it in your browser to start the download."
-  HOME="$DATA_DIR" XDG_CONFIG_HOME="$DATA_DIR/.config" /opt/hytale/hytale-downloader -patchline "$HYTALE_PATCHLINE" -download-path "$game_zip" -credentials-path "$HYTALE_DOWNLOADER_CREDENTIALS_PATH"
-  sync_hytale_downloader_credentials || true
+  msg "Hytale files not found. Starting Flux-friendly setup (authenticate once + download)..."
+  msg "Ensuring Hytale authentication (needed for downloads)..."
+  if ! /opt/hytale/hytale-auth --state-path "$AUTH_STATE_PATH" ensure --client-id "$HYTALE_AUTH_CLIENT_ID"; then
+    msg "Authentication was not completed."
+    return 1
+  fi
+
+  meta_out="$(AUTH_STATE_PATH="$AUTH_STATE_PATH" PATCHLINE="$HYTALE_PATCHLINE" python3 - <<'PY'
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+
+UA = (
+  "Mozilla/5.0 (X11; Linux x86_64) "
+  "AppleWebKit/537.36 (KHTML, like Gecko) "
+  "Chrome/120.0.0.0 Safari/537.36"
+)
+
+patchline = os.environ.get("PATCHLINE", "release").strip() or "release"
+state_path = os.environ.get("AUTH_STATE_PATH", "").strip()
+state = json.loads(open(state_path, "r", encoding="utf-8").read())
+token = str((state.get("oauth") or {}).get("access_token", "")).strip()
+if not token:
+  print("Auth state missing access_token", file=sys.stderr)
+  raise SystemExit(1)
+
+meta_url = f"https://account-data.hytale.com/game-assets/version/{patchline}.json"
+req = urllib.request.Request(
+  meta_url,
+  headers={"Authorization": f"Bearer {token}", "User-Agent": UA, "Accept": "application/json"},
+  method="GET",
+)
+try:
+  with urllib.request.urlopen(req, timeout=25) as resp:
+    first = json.loads(resp.read().decode("utf-8", errors="replace"))
+except urllib.error.HTTPError as e:
+  body = e.read().decode("utf-8", errors="replace")
+  print(f"Metadata request failed (HTTP {e.code}): {body[:200]}", file=sys.stderr)
+  raise SystemExit(1)
+
+signed = str(first.get("url") or "").strip()
+if not signed:
+  print(f"Metadata response missing url: {first}", file=sys.stderr)
+  raise SystemExit(1)
+
+req2 = urllib.request.Request(signed, headers={"User-Agent": UA, "Accept": "application/json"}, method="GET")
+with urllib.request.urlopen(req2, timeout=25) as resp:
+  second = json.loads(resp.read().decode("utf-8", errors="replace"))
+
+version = str(second.get("version") or "").strip()
+sha = str(second.get("sha256") or "").strip().lower()
+download_url = str(second.get("download_url") or "").strip()
+if not version or not sha or not download_url:
+  print(f"Unexpected metadata payload: {second}", file=sys.stderr)
+  raise SystemExit(1)
+
+print(version)
+print(sha)
+print(download_url)
+PY
+)" || meta_out=""
+
+  version="$(printf '%s\n' "$meta_out" | sed -n '1p' | tr -d '\r' | xargs || true)"
+  sha256="$(printf '%s\n' "$meta_out" | sed -n '2p' | tr -d '\r' | xargs || true)"
+  download_url="$(printf '%s\n' "$meta_out" | sed -n '3p' | tr -d '\r' | xargs || true)"
+
+  if [[ -z "${version//[[:space:]]/}" || -z "${sha256//[[:space:]]/}" || -z "${download_url//[[:space:]]/}" ]]; then
+    msg "Failed to fetch download metadata."
+    return 1
+  fi
+
+  msg "Latest version: ${version}"
+  msg "Downloading game bundle to ${game_zip}..."
+  curl_args=(-fL --retry 5 --retry-delay 2 --retry-connrefused)
+  if [[ -f "$game_zip" ]]; then
+    curl_args+=(-C -)
+  fi
+  curl "${curl_args[@]}" -o "$game_zip" "$download_url"
 
   if [[ ! -f "$game_zip" ]]; then
     msg "Download completed but ${game_zip} was not created."
+    return 1
+  fi
+
+  msg "Validating checksum..."
+  if ! printf '%s  %s\n' "$sha256" "$game_zip" | sha256sum -c - >/dev/null 2>&1; then
+    msg "Checksum mismatch for ${game_zip}."
+    rm -f "$game_zip" 2>/dev/null || true
     return 1
   fi
 
@@ -845,10 +1059,7 @@ ensure_hytale_files() {
   msg "- ${JAR_PATH}"
   msg "- ${ASSETS_PATH}"
 
-  local latest_version=""
-  if latest_version="$(hytale_downloader_print_version 2>/dev/null)"; then
-    write_version_marker "$latest_version" || true
-  fi
+  write_version_marker "$version" || true
 }
 
 detect_hytale_archive_layout() {
@@ -1016,13 +1227,82 @@ maybe_auto_update_hytale_files() {
     return 0
   fi
 
-  if [[ ! -x /opt/hytale/hytale-downloader ]]; then
-    msg "HYTALE_AUTO_UPDATE=1 is set, but hytale-downloader is not available in this image."
+  if [[ ! -f "$AUTH_STATE_PATH" ]]; then
+    msg "Auto-update enabled but auth state not found yet; skipping auto-update."
     return 0
   fi
 
-  local latest_version=""
-  if ! latest_version="$(hytale_downloader_print_version)"; then
+  # Refresh tokens if needed (should not require device login unless refresh token is invalid).
+  if ! /opt/hytale/hytale-auth --state-path "$AUTH_STATE_PATH" ensure --client-id "$HYTALE_AUTH_CLIENT_ID" >/dev/null; then
+    msg "Auto-update enabled but auth refresh failed; skipping auto-update."
+    return 0
+  fi
+
+  meta_out="$(AUTH_STATE_PATH="$AUTH_STATE_PATH" PATCHLINE="$HYTALE_PATCHLINE" python3 - <<'PY'
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+
+UA = (
+  "Mozilla/5.0 (X11; Linux x86_64) "
+  "AppleWebKit/537.36 (KHTML, like Gecko) "
+  "Chrome/120.0.0.0 Safari/537.36"
+)
+
+patchline = os.environ.get("PATCHLINE", "release").strip() or "release"
+state_path = os.environ.get("AUTH_STATE_PATH", "").strip()
+if not state_path:
+  print("Missing AUTH_STATE_PATH", file=sys.stderr)
+  raise SystemExit(1)
+
+state = json.loads(open(state_path, "r", encoding="utf-8").read())
+token = str((state.get("oauth") or {}).get("access_token", "")).strip()
+if not token:
+  print("Auth state missing access_token", file=sys.stderr)
+  raise SystemExit(1)
+
+meta_url = f"https://account-data.hytale.com/game-assets/version/{patchline}.json"
+req = urllib.request.Request(
+  meta_url,
+  headers={"Authorization": f"Bearer {token}", "User-Agent": UA, "Accept": "application/json"},
+  method="GET",
+)
+try:
+  with urllib.request.urlopen(req, timeout=25) as resp:
+    first = json.loads(resp.read().decode("utf-8", errors="replace"))
+except urllib.error.HTTPError as e:
+  body = e.read().decode("utf-8", errors="replace")
+  print(f"Metadata request failed (HTTP {e.code}): {body[:200]}", file=sys.stderr)
+  raise SystemExit(1)
+
+signed = str(first.get("url") or "").strip()
+if not signed:
+  print(f"Metadata response missing url: {first}", file=sys.stderr)
+  raise SystemExit(1)
+
+req2 = urllib.request.Request(signed, headers={"User-Agent": UA, "Accept": "application/json"}, method="GET")
+with urllib.request.urlopen(req2, timeout=25) as resp:
+  second = json.loads(resp.read().decode("utf-8", errors="replace"))
+
+version = str(second.get("version") or "").strip()
+sha = str(second.get("sha256") or "").strip().lower()
+download_url = str(second.get("download_url") or "").strip()
+if not version or not sha or not download_url:
+  print(f"Unexpected metadata payload: {second}", file=sys.stderr)
+  raise SystemExit(1)
+
+print(version)
+print(sha)
+print(download_url)
+PY
+)" || meta_out=""
+
+  latest_version="$(printf '%s\n' "$meta_out" | sed -n '1p' | tr -d '\r' | xargs || true)"
+  latest_sha256="$(printf '%s\n' "$meta_out" | sed -n '2p' | tr -d '\r' | xargs || true)"
+  latest_download_url="$(printf '%s\n' "$meta_out" | sed -n '3p' | tr -d '\r' | xargs || true)"
+  if [[ -z "${latest_version//[[:space:]]/}" || -z "${latest_sha256//[[:space:]]/}" || -z "${latest_download_url//[[:space:]]/}" ]]; then
     msg "Unable to determine latest Hytale version; skipping auto-update."
     return 0
   fi
@@ -1046,25 +1326,34 @@ maybe_auto_update_hytale_files() {
   mkdir -p "$DATA_DIR"
   cd "$DATA_DIR"
 
-  HOME="$DATA_DIR" XDG_CONFIG_HOME="$DATA_DIR/.config" /opt/hytale/hytale-downloader -patchline "$HYTALE_PATCHLINE" -download-path "$game_zip" -credentials-path "$HYTALE_DOWNLOADER_CREDENTIALS_PATH"
-  sync_hytale_downloader_credentials || true
+  msg "Downloading update bundle..."
+  curl_args=(-fL --retry 5 --retry-delay 2 --retry-connrefused)
+  if [[ -f "$game_zip" ]]; then
+    curl_args+=(-C -)
+  fi
+  curl "${curl_args[@]}" -o "$game_zip" "$latest_download_url"
 
   if [[ ! -f "$game_zip" ]]; then
     msg "Auto-update completed but ${game_zip} was not created."
     return 1
   fi
 
+  msg "Validating checksum..."
+  if ! printf '%s  %s\n' "$latest_sha256" "$game_zip" | sha256sum -c - >/dev/null 2>&1; then
+    msg "Checksum mismatch for ${game_zip}."
+    rm -f "$game_zip" 2>/dev/null || true
+    return 1
+  fi
+
   rm -rf "$extract_dir"
   mkdir -p "$extract_dir"
 
-  local asset_entry
-  local zip_layout=""
+  local zip_layout="" asset_entry="" server_prefix=""
   if ! zip_layout="$(detect_hytale_archive_layout "$game_zip" 2>/dev/null)"; then
     msg "Unable to find Assets.zip and/or Server folder inside ${game_zip}."
     return 1
   fi
   asset_entry="$(printf '%s\n' "$zip_layout" | sed -n '1p' | tr -d '\r')"
-  local server_prefix=""
   server_prefix="$(printf '%s\n' "$zip_layout" | sed -n '2p' | tr -d '\r')"
 
   unzip -q "$game_zip" -d "$extract_dir" "$asset_entry" "${server_prefix}*"
@@ -1080,6 +1369,7 @@ maybe_auto_update_hytale_files() {
 
   cp -f "${extract_dir}/${asset_entry}" "$ASSETS_PATH"
 
+  msg "Updating server files (preserving world data)..."
   SRC_SERVER_DIR="${extract_dir}/${server_prefix}" DST_SERVER_DIR="$SERVER_DIR" SKIP_PATTERNS="$HYTALE_UPDATE_SKIP_PATTERNS" python3 - <<'PY'
 import os
 import shutil
@@ -1120,12 +1410,10 @@ for root, dirs, files in os.walk(src):
 PY
 
   write_version_marker "$latest_version" || true
-
   if ! bool_true "$HYTALE_KEEP_DOWNLOAD_ARCHIVE"; then
     rm -rf "$extract_dir"
     rm -f "$game_zip"
   fi
-
   msg "Auto-update complete."
 }
 
@@ -1222,6 +1510,10 @@ mkdir -p "$DATA_DIR"
 start_log_capture || true
 start_hytale_panel || true
 
+if auth_state_has_session_tokens 2>/dev/null; then
+  rm -f "$HYTALE_DEVICE_STATUS_PATH" 2>/dev/null || true
+fi
+
 run_mode="${HYTALE_RUN_MODE,,}"
 if [[ "$run_mode" == "auth" ]]; then
   exec /opt/hytale/hytale-auth --state-path "$AUTH_STATE_PATH" ensure --client-id "$HYTALE_AUTH_CLIENT_ID"
@@ -1244,6 +1536,10 @@ if [[ "$HYTALE_CONSOLE_MODE" == "file" ]]; then
   if bool_true "$HYTALE_CONSOLE_CLEAR_ON_START"; then
     : > "$CONSOLE_FILE"
   fi
+fi
+
+if hytale_has_server_files && [[ -f "$HYTALE_TRIGGER_DOWNLOAD_FILE" ]]; then
+  rm -f "$HYTALE_TRIGGER_DOWNLOAD_FILE" 2>/dev/null || true
 fi
 
 wait_for_hytale_files
@@ -1344,7 +1640,10 @@ fi
 
 if [[ "$HYTALE_AUTH_MODE" == "authenticated" ]]; then
   if [[ -n "${HYTALE_SERVER_IDENTITY_TOKEN:-}" && -n "${HYTALE_SERVER_SESSION_TOKEN:-}" ]]; then
+    msg "Auth tokens are ready; starting server in authenticated mode."
     args+=(--identity-token "$HYTALE_SERVER_IDENTITY_TOKEN" --session-token "$HYTALE_SERVER_SESSION_TOKEN")
+  else
+    msg "Auth tokens are missing; starting without tokens (you may see a /auth login prompt in logs)."
   fi
 fi
 

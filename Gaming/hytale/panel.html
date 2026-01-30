@@ -10,7 +10,6 @@
         --bg0:#070a12;
         --bg1:#0b1020;
         --panel: rgba(255,255,255,.045);
-        --panel2: rgba(255,255,255,.02);
         --stroke: rgba(255,255,255,.10);
         --stroke2: rgba(255,255,255,.16);
         --text:#ecf2ff;
@@ -23,6 +22,7 @@
         --shadow: 0 28px 80px rgba(0,0,0,.58);
         --shadow2: 0 14px 42px rgba(0,0,0,.45);
         --r: 18px;
+        --monoSize: 13px;
       }
 
       *{ box-sizing: border-box; }
@@ -30,10 +30,11 @@
       body{
         margin:0;
         font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-        background: radial-gradient(1200px 800px at 10% -10%, rgba(0,229,168,.22), rgba(0,0,0,0) 55%),
-                    radial-gradient(900px 700px at 90% 0%, rgba(0,179,255,.20), rgba(0,0,0,0) 50%),
-                    radial-gradient(900px 700px at 70% 120%, rgba(0,229,168,.14), rgba(0,0,0,0) 55%),
-                    linear-gradient(180deg, var(--bg0), var(--bg1));
+        background:
+          radial-gradient(1200px 800px at 10% -10%, rgba(0,229,168,.22), rgba(0,0,0,0) 55%),
+          radial-gradient(900px 700px at 90% 0%, rgba(0,179,255,.20), rgba(0,0,0,0) 50%),
+          radial-gradient(900px 700px at 70% 120%, rgba(0,229,168,.14), rgba(0,0,0,0) 55%),
+          linear-gradient(180deg, var(--bg0), var(--bg1));
         color: var(--text);
         min-height: 100vh;
         overflow-x:hidden;
@@ -61,7 +62,7 @@
       }
 
       a{ color: inherit; }
-      .wrap{ max-width: 1180px; margin: 0 auto; padding: 22px 18px 56px; }
+
       header{
         position: sticky; top:0; z-index: 10;
         backdrop-filter: blur(14px);
@@ -69,13 +70,12 @@
         border-bottom: 1px solid rgba(255,255,255,.08);
       }
       .topbar{
-        max-width:1180px; margin:0 auto;
+        max-width: 1240px;
+        margin: 0 auto;
         padding: 14px 18px;
         display:flex; align-items:center; justify-content:space-between; gap:14px;
       }
-      .brand{
-        display:flex; align-items:center; gap:12px; min-width:0;
-      }
+      .brand{ display:flex; align-items:center; gap:12px; min-width:0; }
       .logo{
         width: 34px; height: 34px; border-radius: 12px;
         background:
@@ -108,9 +108,7 @@
         text-overflow: ellipsis;
       }
 
-      .right{
-        display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end;
-      }
+      .right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
       .pill{
         display:inline-flex; align-items:center; gap:8px;
         padding: 7px 10px;
@@ -140,6 +138,7 @@
       button:hover{ background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.20); }
       button:active{ transform: translateY(1px); }
       button:disabled{ opacity:.55; cursor:not-allowed; transform:none; }
+
       .btn-primary{
         border-color: rgba(0,229,168,.45);
         background: linear-gradient(135deg, rgba(0,229,168,.20), rgba(0,179,255,.14));
@@ -148,17 +147,16 @@
       .btn-primary:hover{ border-color: rgba(0,229,168,.68); background: linear-gradient(135deg, rgba(0,229,168,.26), rgba(0,179,255,.18)); }
       .btn-danger{ border-color: rgba(255,91,110,.55); background: rgba(255,91,110,.10); }
       .btn-ghost{ background: rgba(255,255,255,.03); }
-      .btn-chip{
-        padding: 8px 10px; border-radius: 999px;
-        background: rgba(255,255,255,.03);
-      }
+      .btn-chip{ padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,.03); }
       .btn-chip:hover{ background: rgba(255,255,255,.08); }
+
       input{
         padding: 11px 12px;
         width: 100%;
         outline:none;
       }
       input:focus{ border-color: rgba(0,179,255,.55); box-shadow: 0 0 0 4px rgba(0,179,255,.12); }
+
       code{
         background: rgba(255,255,255,.06);
         border:1px solid rgba(255,255,255,.12);
@@ -166,24 +164,13 @@
         border-radius: 999px;
         font-size: 12px;
       }
-      pre{
-        margin:0;
-        background: rgba(0,0,0,.34);
-        border: 1px solid rgba(255,255,255,.10);
-        border-radius: var(--r);
-        padding: 14px;
-        overflow: auto;
-        max-height: 560px;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+
+      .wrap{ max-width: 1240px; margin: 0 auto; padding: 18px 18px 56px; }
+      .grid{ display:grid; gap: 14px; }
+      @media (min-width: 980px){
+        .grid.cols-2{ grid-template-columns: .78fr 1.22fr; align-items:start; }
       }
 
-      .grid{
-        display:grid;
-        gap: 14px;
-      }
-      @media (min-width: 980px){
-        .grid.cols-2{ grid-template-columns: 1.05fr .95fr; align-items:start; }
-      }
       .card{
         background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
         border: 1px solid rgba(255,255,255,.10);
@@ -196,41 +183,24 @@
       .card::before{
         content:"";
         position:absolute; inset:-1px;
-        background: radial-gradient(600px 300px at 20% 0%, rgba(0,229,168,.10), rgba(0,0,0,0) 55%),
-                    radial-gradient(520px 280px at 90% 20%, rgba(0,179,255,.09), rgba(0,0,0,0) 55%);
+        background:
+          radial-gradient(600px 300px at 20% 0%, rgba(0,229,168,.10), rgba(0,0,0,0) 55%),
+          radial-gradient(520px 280px at 90% 20%, rgba(0,179,255,.09), rgba(0,0,0,0) 55%);
         opacity:.7;
         pointer-events:none;
       }
       .card > *{ position:relative; }
-      .muted{ color: var(--muted); }
-      .muted2{ color: var(--muted2); }
+
       .row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
       .space{ justify-content: space-between; }
-      .kvs{ display:grid; grid-template-columns: 130px 1fr; gap: 8px 12px; margin-top: 10px; }
-      .kvs .k{ color: var(--muted2); }
+      .muted{ color: var(--muted); }
+      .muted2{ color: var(--muted2); }
+      .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: var(--monoSize); line-height: 1.35; }
 
-      .tabs{ display:flex; gap:8px; flex-wrap:wrap; }
-      .tab{ padding: 9px 11px; border-radius: 999px; }
-      .tab.active{
-        border-color: rgba(0,229,168,.55);
-        background: linear-gradient(135deg, rgba(0,229,168,.16), rgba(0,179,255,.12));
-      }
-
-      .hero{
-        display:flex;
-        gap: 14px;
-        align-items:flex-start;
-      }
-      .hero h2{
-        margin:0;
-        font-size: 22px;
-        letter-spacing: -.2px;
-      }
+      .hero h2{ margin:0; font-size: 22px; letter-spacing: -.2px; }
       .hero p{ margin: 6px 0 0; color: var(--muted); line-height: 1.4; }
 
-      .stepper{
-        display:grid; gap:10px; margin-top: 12px;
-      }
+      .stepper{ display:grid; gap:10px; margin-top: 12px; }
       .step{
         border:1px solid rgba(255,255,255,.10);
         border-radius: 16px;
@@ -247,7 +217,6 @@
         font-size: 12px;
         color: var(--muted);
       }
-      .step-title b{ font-size: 13px; letter-spacing:.2px; }
       .state{
         display:inline-flex; align-items:center; gap:8px;
         padding: 6px 10px;
@@ -271,6 +240,26 @@
         padding: 12px;
         margin-top: 10px;
       }
+      .kvs{ display:grid; grid-template-columns: 130px 1fr; gap: 8px 12px; margin-top: 10px; }
+      .kvs .k{ color: var(--muted2); }
+
+      pre{
+        margin:0;
+        background: rgba(0,0,0,.34);
+        border: 1px solid rgba(255,255,255,.10);
+        border-radius: var(--r);
+        padding: 14px;
+        overflow: auto;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      body.nowrap pre{ white-space: pre; overflow-wrap: normal; }
+
+      .logbox{ height: calc(100vh - 240px); min-height: 380px; }
+      @media (max-width: 979px){
+        .logbox{ height: 52vh; min-height: 320px; }
+      }
 
       .toast{
         position: fixed;
@@ -287,9 +276,6 @@
         box-shadow: var(--shadow);
         backdrop-filter: blur(16px);
       }
-
-      .hidden{ display:none !important; }
-      .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
 
       .filegrid{ display:grid; gap:10px; }
       @media (min-width: 980px){ .filegrid{ grid-template-columns: 1fr 1fr; } }
@@ -319,44 +305,37 @@
         <section class="card">
           <div class="hero">
             <div style="flex:1; min-width:0;">
-              <h2>Launch checklist</h2>
-              <p>One flow, one place. Download files, complete device login once, then watch the server come online. This UI is intentionally Flux-friendly and keeps persistence in <span class="mono">/data</span>.</p>
-            </div>
-            <div class="tabs">
-              <button id="tabOverview" class="tab active" type="button">Overview</button>
-              <button id="tabLogs" class="tab" type="button">Logs</button>
-              <button id="tabFiles" class="tab" type="button">Mods</button>
+              <h2>Guided setup</h2>
+              <p>Click <b>Begin setup</b>, approve the device login once, and the server will download + start. Saves and auth state live in <span class="mono">/data</span> for Flux-friendly persistence.</p>
             </div>
           </div>
 
-          <div class="stepper" style="margin-top:14px;">
+          <div class="stepper">
             <div class="step">
               <div class="step-head">
-                <div class="step-title"><span class="num">1</span><div><b>Server files</b><div class="muted2" style="font-size:12px; margin-top:2px;">Populates <span class="mono">/data/Server</span> + <span class="mono">/data/Assets.zip</span></div></div></div>
-                <div class="state"><span class="spinner hidden" id="filesSpin"></span><span id="filesStateText">…</span></div>
+                <div class="step-title"><span class="num">1</span><div><b>Begin setup</b><div class="muted2" style="font-size:12px; margin-top:2px;">Auth + download (first run), then boots automatically</div></div></div>
+                <div class="state"><span class="spinner" id="setupSpin" style="display:none;"></span><span id="setupStateText">…</span></div>
               </div>
               <div class="row" style="margin-top:10px;">
-                <button id="downloadBtn" class="btn-primary" type="button">Download / Update files</button>
-                <button id="downloadExplainBtn" class="btn-chip" type="button" title="What happens when I click download?">What is this?</button>
-                <span class="muted2" id="filesDetail" style="font-size:12px;"></span>
+                <button id="beginBtn" class="btn-primary" type="button">Begin setup</button>
+                <button id="downloadOnlyBtn" class="btn-ghost" type="button" title="Download server files (reuses your persisted /data auth when available)">Download only</button>
+                <button id="authOnlyBtn" class="btn-ghost" type="button" title="Authenticate (device login) without downloading">Auth only</button>
+                <button id="resetAuthBtn" class="btn-danger" type="button" title="Clears /data/auth/state.json">Reset auth</button>
               </div>
-            </div>
+              <div class="muted2" id="setupHint" style="margin-top:10px; font-size:12px;"></div>
 
-            <div class="step">
-              <div class="step-head">
-                <div class="step-title"><span class="num">2</span><div><b>Account auth</b><div class="muted2" style="font-size:12px; margin-top:2px;">Stores tokens under <span class="mono">/data</span> to avoid re-auth</div></div></div>
-                <div class="state"><span class="spinner hidden" id="authSpin"></span><span id="authStateText">…</span></div>
-              </div>
-
-              <div id="deviceCallout" class="callout hidden">
+              <div id="deviceCallout" class="callout" style="display:none;">
                 <div class="row space">
                   <div>
                     <div style="font-size:13px; letter-spacing:.2px;">Device login required</div>
                     <div class="muted" style="margin-top:4px; line-height:1.35;">
-                      Open the URL, approve, then return here. This should be needed once per persistent <span class="mono">/data</span>.
+                      Open the URL, approve, then come back here. This should be a one-time setup per persistent <span class="mono">/data</span>.
                     </div>
                   </div>
-                  <button id="copyCodeBtn" class="btn-chip" type="button">Copy code</button>
+                  <div class="row">
+                    <button id="copyUrlBtn" class="btn-chip" type="button">Copy URL</button>
+                    <button id="copyCodeBtn" class="btn-chip" type="button">Copy code</button>
+                  </div>
                 </div>
                 <div class="row" style="margin-top:10px;">
                   <div style="flex: 1; min-width:0;">
@@ -370,160 +349,110 @@
                     <div class="mono" id="deviceCode" style="margin-top:4px;">—</div>
                   </div>
                 </div>
-                <div class="muted2" style="margin-top:10px; font-size:12px;">
-                  Source: <span id="deviceSource" class="mono"></span> · Tip: if you already approved, click <span class="mono">Refresh</span> above.
-                </div>
-              </div>
-
-              <div class="row" style="margin-top:10px;">
-                <button id="authBtn" class="btn-primary" type="button">Run auth helper</button>
-                <button id="resetAuthBtn" class="btn-danger" type="button" title="Clears /data/auth/state.json">Reset auth state</button>
-                <span class="muted2" id="authDetail" style="font-size:12px;"></span>
+                <div class="muted2" style="margin-top:10px; font-size:12px;">Source: <span id="deviceSource" class="mono"></span></div>
               </div>
             </div>
 
             <div class="step">
               <div class="step-head">
-                <div class="step-title"><span class="num">3</span><div><b>Server online</b><div class="muted2" style="font-size:12px; margin-top:2px;">Bind + version + console controls</div></div></div>
-                <div class="state"><span class="spinner hidden" id="runSpin"></span><span id="runStateText">…</span></div>
+                <div class="step-title"><span class="num">2</span><div><b>Server online</b><div class="muted2" style="font-size:12px; margin-top:2px;">Bind + version</div></div></div>
+                <div class="state"><span class="spinner" id="runSpin" style="display:none;"></span><span id="runStateText">…</span></div>
               </div>
-
               <div class="kvs">
                 <div class="k">Bind</div><div><code id="bindVal"></code></div>
                 <div class="k">Auth mode</div><div><code id="authModeVal"></code></div>
                 <div class="k">Version</div><div><code id="versionVal"></code></div>
               </div>
+              <div class="row" style="margin-top:10px;">
+                <span id="statusLine" class="muted" style="font-size:12px;"></span>
+              </div>
+            </div>
 
+            <div class="step">
+              <div class="step-head">
+                <div class="step-title"><span class="num">3</span><div><b>Quick actions</b><div class="muted2" style="font-size:12px; margin-top:2px;">Queues console commands (Flux-safe)</div></div></div>
+              </div>
+              <div id="presetRow" class="row" style="margin-top:10px;"></div>
               <div class="row" style="margin-top:12px;">
-                <button id="openLogsBtn" class="btn-ghost" type="button">Open logs tab</button>
-                <span id="statusLine" class="muted"></span>
+                <div style="flex:1; min-width: 260px;">
+                  <input id="cmdInput" class="mono" placeholder="/help" autocomplete="off" />
+                </div>
+                <button id="sendBtn" class="btn-primary" type="button">Send</button>
+                <button id="clearConsoleBtn" class="btn-ghost" type="button">Clear queue</button>
               </div>
+              <div id="cmdResult" class="muted2" style="margin-top:10px; font-size:12px;"></div>
             </div>
-          </div>
-
-          <div class="card" style="margin-top:14px;">
-            <div class="row space">
-              <div>
-                <div style="letter-spacing:.2px;">Quick actions</div>
-                <div class="muted2" style="margin-top:4px; font-size:12px;">Safer presets for common server commands. These are queued until the server is running.</div>
-              </div>
-              <button id="clearConsoleBtn" class="btn-ghost" type="button">Clear command queue</button>
-            </div>
-            <div id="presetRow" class="row" style="margin-top:10px;"></div>
-
-            <div class="row" style="margin-top:12px;">
-              <div style="flex:1; min-width: 260px;">
-                <input id="cmdInput" class="mono" placeholder="/help" autocomplete="off" />
-              </div>
-              <button id="sendBtn" class="btn-primary" type="button">Send command</button>
-            </div>
-            <div id="cmdResult" class="muted2" style="margin-top:10px; font-size:12px;"></div>
           </div>
         </section>
 
         <section class="card">
-          <div id="panelOverview">
-            <div class="row space">
-              <div>
-                <div style="letter-spacing:.2px;">At a glance</div>
-                <div class="muted2" style="margin-top:4px; font-size:12px;">Paths shown here match Flux persistence expectations.</div>
-              </div>
+          <div class="row space">
+            <div>
+              <div style="letter-spacing:.2px;">Live logs</div>
+              <div class="muted2" style="margin-top:4px; font-size:12px;">Auto-updates. ANSI is stripped for readability.</div>
             </div>
-
-            <div class="kvs" style="margin-top:10px;">
-              <div class="k">Console file</div><div><code id="consoleVal"></code></div>
-              <div class="k">Log file</div><div><code id="logVal"></code></div>
-              <div class="k">Server dir</div><div><code id="serverDirVal"></code></div>
-              <div class="k">Assets</div><div><code id="assetsVal"></code></div>
-            </div>
-
-            <div class="card" style="margin-top:14px;">
-              <div class="row space">
-                <div>
-                  <div style="letter-spacing:.2px;">Recent command queue</div>
-                  <div class="muted2" style="margin-top:4px; font-size:12px;">Last <code id="consoleLinesVal">30</code> queued commands.</div>
-                </div>
-                <div class="row">
-                  <button id="console30" class="btn-chip" type="button">30</button>
-                  <button id="console200" class="btn-chip" type="button">200</button>
-                </div>
-              </div>
-              <pre id="consoleBox" style="margin-top:12px;"></pre>
-            </div>
-          </div>
-
-          <div id="panelLogs" class="hidden">
-            <div class="row space">
-              <div>
-                <div style="letter-spacing:.2px;">Logs</div>
-                <div class="muted2" style="margin-top:4px; font-size:12px;">Tail + filter. Device URLs / codes should appear here during setup.</div>
-              </div>
-              <div class="row">
-                <input id="logFilter" placeholder="Filter (e.g. oauth, error, auth)" />
-              </div>
-            </div>
-            <div class="row" style="margin-top:10px;">
+            <div class="row">
+              <button id="fontDownBtn" class="btn-chip" type="button" title="Smaller log font">A−</button>
+              <button id="fontUpBtn" class="btn-chip" type="button" title="Larger log font">A+</button>
+              <button id="wrapBtn" class="btn-chip" type="button">Wrap: on</button>
+              <button id="autoBtn" class="btn-chip" type="button">Auto-scroll: on</button>
               <button id="log400" class="btn-chip" type="button">400</button>
               <button id="log1200" class="btn-chip" type="button">1200</button>
               <button id="log6000" class="btn-chip" type="button">6000</button>
-              <span class="muted2" style="font-size:12px;">Showing last <code id="logLinesVal">400</code> lines</span>
-            </div>
-            <pre id="logBox" class="mono" style="margin-top:12px;"></pre>
-          </div>
-
-          <div id="panelFiles" class="hidden">
-            <div class="row space">
-              <div>
-                <div style="letter-spacing:.2px;">Mods / Plugins</div>
-                <div class="muted2" style="margin-top:4px; font-size:12px;">Lightweight file management designed to avoid Flux volume-browser pain. (Experimental.)</div>
-              </div>
-              <button id="modsRefreshBtn" class="btn-ghost" type="button">Refresh</button>
-            </div>
-            <div class="filegrid" style="margin-top:12px;">
-              <div class="card">
-                <div class="row space">
-                  <div>
-                    <div style="letter-spacing:.2px;">Mods</div>
-                    <div class="muted2" style="margin-top:4px; font-size:12px;"><span class="mono">/data/Server/mods</span></div>
-                  </div>
-                </div>
-                <div id="modsList" class="filelist" style="margin-top:10px;"></div>
-                <form id="modsUploadForm" style="margin-top:10px;">
-                  <input type="file" id="modsFile" />
-                  <button type="submit" class="btn-primary" style="margin-top:10px; width:100%;">Upload to mods</button>
-                </form>
-              </div>
-              <div class="card">
-                <div class="row space">
-                  <div>
-                    <div style="letter-spacing:.2px;">Plugins</div>
-                    <div class="muted2" style="margin-top:4px; font-size:12px;"><span class="mono">/data/Server/plugins</span></div>
-                  </div>
-                </div>
-                <div id="pluginsList" class="filelist" style="margin-top:10px;"></div>
-                <form id="pluginsUploadForm" style="margin-top:10px;">
-                  <input type="file" id="pluginsFile" />
-                  <button type="submit" class="btn-primary" style="margin-top:10px; width:100%;">Upload to plugins</button>
-                </form>
-              </div>
             </div>
           </div>
+          <div class="row" style="margin-top:10px;">
+            <input id="logFilter" placeholder="Filter (e.g. oauth, error, auth, download)" />
+            <button id="copyLogsBtn" class="btn-ghost" type="button">Copy logs</button>
+          </div>
+          <pre id="logBox" class="mono logbox" style="margin-top:12px;"></pre>
         </section>
       </div>
+
+      <section class="card" style="margin-top:14px;">
+        <div class="row space">
+          <div>
+            <div style="letter-spacing:.2px;">Mods / Plugins (experimental)</div>
+            <div class="muted2" style="margin-top:4px; font-size:12px;">Lightweight file management designed to avoid Flux volume-browser pain.</div>
+          </div>
+          <button id="modsRefreshBtn" class="btn-ghost" type="button">Refresh</button>
+        </div>
+        <div class="filegrid" style="margin-top:12px;">
+          <div class="card">
+            <div class="muted2" style="font-size:12px;">Mods directory: <span class="mono">/data/Server/mods</span></div>
+            <div id="modsList" class="filelist" style="margin-top:10px;"></div>
+            <form id="modsUploadForm" style="margin-top:10px;">
+              <input type="file" id="modsFile" />
+              <button type="submit" class="btn-primary" style="margin-top:10px; width:100%;">Upload to mods</button>
+            </form>
+          </div>
+          <div class="card">
+            <div class="muted2" style="font-size:12px;">Plugins directory: <span class="mono">/data/Server/plugins</span></div>
+            <div id="pluginsList" class="filelist" style="margin-top:10px;"></div>
+            <form id="pluginsUploadForm" style="margin-top:10px;">
+              <input type="file" id="pluginsFile" />
+              <button type="submit" class="btn-primary" style="margin-top:10px; width:100%;">Upload to plugins</button>
+            </form>
+          </div>
+        </div>
+      </section>
     </div>
 
     <div class="toast" id="toast"></div>
 
     <script>
       let logLines = 400;
-      let consoleLines = 30;
       let lastStatus = null;
       let logCache = "";
+      let wrapEnabled = true;
+      let autoScrollEnabled = true;
+      let monoSize = 13;
 
       const presets = [
         { label: "Help", command: "/help" },
         { label: "List players", command: "/list" },
-        { label: "Auth device login", command: "/auth login device" },
+        { label: "Auth: link server", command: "/auth login device", confirm: "Start device auth on the server?" },
+        { label: "Auth: status", command: "/auth status" },
       ];
 
       function el(id){ return document.getElementById(id); }
@@ -570,15 +499,6 @@
         return await r.text();
       }
 
-      function setTab(name){
-        el("tabOverview").classList.toggle("active", name === "overview");
-        el("tabLogs").classList.toggle("active", name === "logs");
-        el("tabFiles").classList.toggle("active", name === "files");
-        el("panelOverview").classList.toggle("hidden", name !== "overview");
-        el("panelLogs").classList.toggle("hidden", name !== "logs");
-        el("panelFiles").classList.toggle("hidden", name !== "files");
-      }
-
       function setHealth(state, text){
         const dot = el("healthDot");
         dot.classList.remove("ok","bad","warn");
@@ -586,91 +506,21 @@
         el("healthText").textContent = text;
       }
 
-      function setStepState(spinnerId, textId, running, text){
-        el(spinnerId).classList.toggle("hidden", !running);
-        el(textId).textContent = text;
+      function setSpin(id, on){
+        el(id).style.display = on ? "" : "none";
       }
 
       function setDeviceInfo(device){
         const callout = el("deviceCallout");
         if (!device || (!device.url && !device.code)){
-          callout.classList.add("hidden");
+          callout.style.display = "none";
           return;
         }
-        callout.classList.remove("hidden");
+        callout.style.display = "";
         el("deviceUrl").textContent = device.url || "—";
         el("deviceUrl").href = device.url || "#";
         el("deviceCode").textContent = device.code || "—";
         el("deviceSource").textContent = device.source || "unknown";
-      }
-
-      function renderPresets(){
-        const row = el("presetRow");
-        row.innerHTML = "";
-        for (const p of presets){
-          const b = document.createElement("button");
-          b.type = "button";
-          b.className = "btn-chip";
-          b.textContent = p.label;
-          b.addEventListener("click", async () => {
-            try{
-              await sendCommand(p.command);
-            }catch(e){ toast(String(e.message || e)); }
-          });
-          row.appendChild(b);
-        }
-      }
-
-      async function refreshStatus(){
-        const s = await apiJson("/api/status");
-        lastStatus = s;
-
-        const filesPresent = !!(s.server && s.server.filesPresent);
-        const serverRunning = !!(s.server && s.server.running);
-        const authStatePresent = !!(s.auth && s.auth.stateFilePresent);
-        const downloading = !!(s.setup && s.setup.downloaderRunning);
-        const authing = !!(s.setup && s.setup.authHelperRunning);
-
-        if (serverRunning) setHealth("ok", "Server running");
-        else if (downloading || authing) setHealth("warn", "Setup in progress");
-        else setHealth("bad", "Not running yet");
-
-        setStepState("filesSpin", "filesStateText", downloading, filesPresent ? "Ready" : (downloading ? "Downloading…" : "Missing"));
-        setStepState("authSpin", "authStateText", authing, authStatePresent ? "Ready" : (authing ? "Authorizing…" : "Not ready"));
-        setStepState("runSpin", "runStateText", (!serverRunning && filesPresent && authStatePresent), serverRunning ? "Online" : "Waiting");
-
-        el("bindVal").textContent = (s.server && s.server.bind) || "";
-        el("authModeVal").textContent = (s.server && s.server.authMode) || "";
-        el("versionVal").textContent = (s.server && s.server.version) || "unknown";
-
-        el("consoleVal").textContent = (s.paths && s.paths.consoleFile) || "";
-        el("logVal").textContent = (s.paths && s.paths.logFile) || "";
-        el("serverDirVal").textContent = (s.paths && s.paths.serverDir) || "";
-        el("assetsVal").textContent = (s.paths && s.paths.assetsPath) || "";
-
-        el("statusLine").textContent = serverRunning ? `PID ${s.server.pid}` : (s.setup && s.setup.lastHint ? s.setup.lastHint : "Waiting for server...");
-
-        if (!filesPresent || !authStatePresent){
-          el("cmdResult").textContent = "Commands will queue, but setup must complete before the server can process them.";
-        } else if (!serverRunning){
-          el("cmdResult").textContent = "Server is starting. Commands will queue until it is online.";
-        } else {
-          el("cmdResult").textContent = "";
-        }
-
-        setDeviceInfo(s.setup && s.setup.device ? s.setup.device : null);
-
-        el("filesDetail").textContent = filesPresent ? "Files present." : "Missing files; click Download / Update.";
-        el("authDetail").textContent = authStatePresent ? "Auth state present." : "Auth not ready; run auth helper or follow device login prompt.";
-
-        el("downloadBtn").disabled = downloading;
-        el("authBtn").disabled = authing;
-      }
-
-      async function refreshConsole(){
-        el("consoleLinesVal").textContent = String(consoleLines);
-        const text = await apiText(`/api/console?lines=${consoleLines}`);
-        el("consoleBox").textContent = text || "(empty)";
       }
 
       function applyLogFilter(raw){
@@ -681,11 +531,57 @@
         return keep.join("\\n");
       }
 
+      async function refreshStatus(){
+        const s = await apiJson("/api/status");
+        lastStatus = s;
+
+        const filesPresent = !!(s.server && s.server.filesPresent);
+        const serverRunning = !!(s.server && s.server.running);
+        const authStatePresent = !!(s.auth && s.auth.stateFilePresent);
+        const sessionPresent = !!(s.auth && s.auth.sessionPresent);
+        const downloading = !!(s.setup && s.setup.downloaderRunning);
+        const authing = !!(s.setup && s.setup.authHelperRunning);
+
+        if (serverRunning) setHealth("ok", "Server running");
+        else if (downloading || authing) setHealth("warn", "Setup in progress");
+        else setHealth("bad", "Not running yet");
+
+        setSpin("setupSpin", downloading || authing);
+        el("setupStateText").textContent = serverRunning ? "Complete" : ((downloading || authing) ? "Working…" : "Ready");
+
+        setSpin("runSpin", (!serverRunning && filesPresent && (sessionPresent || (s.server && s.server.authMode === "offline"))));
+        el("runStateText").textContent = serverRunning ? "Online" : "Waiting";
+
+        el("bindVal").textContent = (s.server && s.server.bind) || "";
+        el("authModeVal").textContent = (s.server && s.server.authMode) || "";
+        el("versionVal").textContent = (s.server && s.server.version) || "unknown";
+
+        el("statusLine").textContent = serverRunning ? `PID ${s.server.pid}` : (s.setup && s.setup.lastHint ? s.setup.lastHint : "");
+
+        // Hints
+        let hint = "";
+        const authMode = (s.server && s.server.authMode) || "authenticated";
+        if (!filesPresent && authMode !== "offline") hint = "First run: click Begin setup, complete the device login once, then it downloads + boots.";
+        else if (!filesPresent) hint = "Missing server files: click Download only (or Begin setup).";
+        else if (authMode !== "offline" && !sessionPresent) hint = "Authenticate to enable online mode: click Auth only (or Begin setup).";
+        else if (!serverRunning) hint = "Server is starting. Watch logs for readiness.";
+        else hint = "Server is online.";
+        el("setupHint").textContent = hint;
+
+        el("beginBtn").disabled = downloading || authing;
+        el("downloadOnlyBtn").disabled = downloading || authing;
+        el("authOnlyBtn").disabled = downloading || authing;
+
+        setDeviceInfo(s.setup && s.setup.device ? s.setup.device : null);
+      }
+
       async function refreshLogs(){
-        el("logLinesVal").textContent = String(logLines);
         const raw = await apiText(`/api/log?lines=${logLines}`);
         logCache = raw || "";
         el("logBox").textContent = applyLogFilter(logCache) || "(no logs yet)";
+        if (autoScrollEnabled){
+          el("logBox").scrollTop = el("logBox").scrollHeight;
+        }
       }
 
       async function sendCommand(cmd){
@@ -693,21 +589,32 @@
         if (!c) return;
         await apiPost("/api/command", { command: c });
         toast(`Queued: ${c}`);
+        el("cmdResult").textContent = `Queued. Watch logs for output: ${c}`;
         el("cmdInput").value = "";
-        await refreshConsole();
         await refreshLogs();
       }
 
-      async function triggerDownload(){
-        await apiPost("/api/setup/download");
-        toast("Download triggered. Watch logs for progress.");
+      async function beginSetup(){
+        // Smoothest path: trigger both auth + download.
+        const authRes = await apiPost("/api/setup/auth").catch(e => e);
+        const dlRes = await apiPost("/api/setup/download").catch(e => e);
+        if (authRes instanceof Error) toast("Auth trigger failed (see logs).");
+        if (dlRes instanceof Error) throw dlRes;
+        toast("Setup started. If prompted, approve the device login once.");
         await refreshStatus();
         await refreshLogs();
       }
 
-      async function triggerAuth(){
+      async function triggerDownloadOnly(){
+        await apiPost("/api/setup/download");
+        toast("Download started.");
+        await refreshStatus();
+        await refreshLogs();
+      }
+
+      async function triggerAuthOnly(){
         await apiPost("/api/setup/auth");
-        toast("Auth helper triggered. Watch logs for device URL/code.");
+        toast("Auth started. If prompted, complete the device login.");
         await refreshStatus();
         await refreshLogs();
       }
@@ -723,7 +630,6 @@
         if (!confirm("Clear the command queue file?")) return;
         await apiPost("/api/console/clear");
         toast("Command queue cleared.");
-        await refreshConsole();
       }
 
       async function refreshMods(){
@@ -779,44 +685,87 @@
         navigator.clipboard.writeText(text).then(() => toast("Copied."), () => toast("Copy failed."));
       }
 
-      el("tabOverview").addEventListener("click", () => setTab("overview"));
-      el("tabLogs").addEventListener("click", () => setTab("logs"));
-      el("tabFiles").addEventListener("click", () => setTab("files"));
-      el("refreshAllBtn").addEventListener("click", async () => { try { await refreshStatus(); await refreshConsole(); await refreshLogs(); } catch(e){ toast(String(e.message || e)); } });
-      el("downloadBtn").addEventListener("click", async () => { try { await triggerDownload(); } catch(e){ toast(String(e.message || e)); } });
-      el("authBtn").addEventListener("click", async () => { try { await triggerAuth(); } catch(e){ toast(String(e.message || e)); } });
+      function renderPresets(){
+        const row = el("presetRow");
+        row.innerHTML = "";
+        for (const p of presets){
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "btn-chip";
+          b.textContent = p.label;
+          b.addEventListener("click", async () => {
+            try{
+              if (p.confirm && !confirm(p.confirm)) return;
+              await sendCommand(p.command);
+            }catch(e){ toast(String(e.message || e)); }
+          });
+          row.appendChild(b);
+        }
+      }
+
+      // Wire-up
+      el("refreshAllBtn").addEventListener("click", async () => { try { await refreshStatus(); await refreshLogs(); } catch(e){ toast(String(e.message || e)); } });
+      el("beginBtn").addEventListener("click", async () => { try { await beginSetup(); } catch(e){ toast(String(e.message || e)); } });
+      el("downloadOnlyBtn").addEventListener("click", async () => { try { await triggerDownloadOnly(); } catch(e){ toast(String(e.message || e)); } });
+      el("authOnlyBtn").addEventListener("click", async () => { try { await triggerAuthOnly(); } catch(e){ toast(String(e.message || e)); } });
       el("resetAuthBtn").addEventListener("click", async () => { try { await resetAuth(); } catch(e){ toast(String(e.message || e)); } });
+
       el("sendBtn").addEventListener("click", async () => { try { await sendCommand(el("cmdInput").value); } catch(e){ toast(String(e.message || e)); } });
       el("cmdInput").addEventListener("keydown", (e) => { if (e.key === "Enter") el("sendBtn").click(); });
-      el("console30").addEventListener("click", async () => { consoleLines = 30; await refreshConsole(); });
-      el("console200").addEventListener("click", async () => { consoleLines = 200; await refreshConsole(); });
+      el("clearConsoleBtn").addEventListener("click", async () => { try { await clearConsole(); } catch(e){ toast(String(e.message || e)); } });
+
+      el("wrapBtn").addEventListener("click", () => {
+        wrapEnabled = !wrapEnabled;
+        document.body.classList.toggle("nowrap", !wrapEnabled);
+        el("wrapBtn").textContent = `Wrap: ${wrapEnabled ? "on" : "off"}`;
+      });
+      el("autoBtn").addEventListener("click", () => {
+        autoScrollEnabled = !autoScrollEnabled;
+        el("autoBtn").textContent = `Auto-scroll: ${autoScrollEnabled ? "on" : "off"}`;
+      });
       el("log400").addEventListener("click", async () => { logLines = 400; await refreshLogs(); });
       el("log1200").addEventListener("click", async () => { logLines = 1200; await refreshLogs(); });
       el("log6000").addEventListener("click", async () => { logLines = 6000; await refreshLogs(); });
-      el("logFilter").addEventListener("input", async () => { el("logBox").textContent = applyLogFilter(logCache) || "(no logs yet)"; });
-      el("openLogsBtn").addEventListener("click", () => setTab("logs"));
-      el("downloadExplainBtn").addEventListener("click", () => {
-        alert("The official Hytale downloader may require a one-time device login to download. This image stores the downloader credentials under /data to avoid repeated logins.");
-      });
+      el("logFilter").addEventListener("input", () => { el("logBox").textContent = applyLogFilter(logCache) || "(no logs yet)"; });
+      el("copyLogsBtn").addEventListener("click", () => { copyText(el("logBox").textContent); });
+
       el("modsRefreshBtn").addEventListener("click", async () => { try { await refreshMods(); } catch(e){ toast(String(e.message || e)); } });
       el("modsUploadForm").addEventListener("submit", async (e) => { e.preventDefault(); await upload("mods", "modsFile"); });
       el("pluginsUploadForm").addEventListener("submit", async (e) => { e.preventDefault(); await upload("plugins", "pluginsFile"); });
-      el("clearConsoleBtn").addEventListener("click", async () => { try { await clearConsole(); } catch(e){ toast(String(e.message || e)); } });
-      el("copyCodeBtn").addEventListener("click", () => {
-        const s = lastStatus && lastStatus.setup && lastStatus.setup.device ? lastStatus.setup.device : null;
-        copyText(s && s.code ? s.code : "");
+
+      el("copyUrlBtn").addEventListener("click", () => {
+        const d = lastStatus && lastStatus.setup && lastStatus.setup.device ? lastStatus.setup.device : null;
+        copyText(d && d.url ? d.url : "");
       });
-      el("deviceUrl").addEventListener("click", (e) => {
-        const href = el("deviceUrl").href;
-        if (!href || href === "#") e.preventDefault();
+      el("copyCodeBtn").addEventListener("click", () => {
+        const d = lastStatus && lastStatus.setup && lastStatus.setup.device ? lastStatus.setup.device : null;
+        copyText(d && d.code ? d.code : "");
       });
 
       renderPresets();
+      document.body.classList.toggle("nowrap", false);
+
+      // Restore per-browser log font size preference
+      try{
+        const saved = parseInt(localStorage.getItem("fluxMonoSize") || "13", 10);
+        if (Number.isFinite(saved) && saved >= 10 && saved <= 20) monoSize = saved;
+      }catch(e){}
+      document.documentElement.style.setProperty("--monoSize", `${monoSize}px`);
+
+      el("fontDownBtn").addEventListener("click", () => {
+        monoSize = Math.max(10, monoSize - 1);
+        document.documentElement.style.setProperty("--monoSize", `${monoSize}px`);
+        try{ localStorage.setItem("fluxMonoSize", String(monoSize)); }catch(e){}
+      });
+      el("fontUpBtn").addEventListener("click", () => {
+        monoSize = Math.min(20, monoSize + 1);
+        document.documentElement.style.setProperty("--monoSize", `${monoSize}px`);
+        try{ localStorage.setItem("fluxMonoSize", String(monoSize)); }catch(e){}
+      });
 
       (async () => {
         try{
           await refreshStatus();
-          await refreshConsole();
           await refreshLogs();
           await refreshMods();
         }catch(e){
@@ -824,8 +773,7 @@
           toast(String(e.message || e));
         }
         setInterval(async () => { try { await refreshStatus(); } catch(e){} }, 3500);
-        setInterval(async () => { try { await refreshConsole(); } catch(e){} }, 6500);
-        setInterval(async () => { try { await refreshLogs(); } catch(e){} }, 9000);
+        setInterval(async () => { try { await refreshLogs(); } catch(e){} }, 5500);
       })();
     </script>
   </body>

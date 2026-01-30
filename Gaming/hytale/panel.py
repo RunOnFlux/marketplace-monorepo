@@ -28,6 +28,7 @@ DOWNLOADER_PID_FILE = Path(env_str("HYTALE_DOWNLOADER_PID_FILE", "/tmp/hytale-do
 AUTH_HELPER_PID_FILE = Path(env_str("HYTALE_AUTH_HELPER_PID_FILE", "/tmp/hytale-auth.pid"))
 TRIGGER_DOWNLOAD_FILE = Path(env_str("HYTALE_TRIGGER_DOWNLOAD_FILE", "/data/.hytale-flux.trigger-download"))
 TRIGGER_AUTH_FILE = Path(env_str("HYTALE_TRIGGER_AUTH_FILE", "/data/.hytale-flux.trigger-auth"))
+DEVICE_STATUS_PATH = Path(env_str("HYTALE_DEVICE_STATUS_PATH", "/data/.hytale-flux.device.json"))
 
 AUTH_STATE_PATH = Path(env_str("HYTALE_AUTH_STATE_PATH", "/data/auth/state.json"))
 VERSION_MARKER_PATH = Path(env_str("HYTALE_VERSION_MARKER_PATH", "/data/.hytale-flux.version.json"))
@@ -149,6 +150,11 @@ _RE_USER_CODE_QUERY = re.compile(r"[?&]user_code=([A-Z0-9-]+)", re.IGNORECASE)
 _RE_SERVER_DEVICE_VISIT = re.compile(r"\\bVisit:\\s*(https?://\\S+)", re.IGNORECASE)
 _RE_SERVER_DEVICE_OR_VISIT = re.compile(r"\\bOr visit:\\s*(https?://\\S+)", re.IGNORECASE)
 _RE_SERVER_DEVICE_CODE = re.compile(r"\\bEnter code:\\s*([A-Z0-9-]+)", re.IGNORECASE)
+_RE_ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+
+
+def strip_ansi(text: str) -> str:
+    return _RE_ANSI.sub("", text or "")
 
 
 def extract_device_auth_from_log(log_text: str) -> dict[str, Any] | None:
@@ -227,6 +233,7 @@ def last_meaningful_log_line(log_text: str) -> str | None:
 def status_payload() -> dict[str, Any]:
     pid = server_pid()
     state = read_json_file(AUTH_STATE_PATH) or {}
+    oauth = state.get("oauth") if isinstance(state.get("oauth"), dict) else {}
     session = state.get("session") if isinstance(state.get("session"), dict) else {}
 
     version = None
@@ -237,9 +244,22 @@ def status_payload() -> dict[str, Any]:
     downloader_pid = read_int_file(DOWNLOADER_PID_FILE)
     auth_helper_pid = read_int_file(AUTH_HELPER_PID_FILE)
 
-    log_tail = tail_lines(LOG_FILE, lines=700)
-    device = extract_device_auth_from_log(log_tail)
+    device_file = read_json_file(DEVICE_STATUS_PATH) or {}
+    device_from_file = None
+    if isinstance(device_file, dict):
+        url = str(device_file.get("url") or "").strip() or None
+        code = str(device_file.get("code") or "").strip() or None
+        if url or code:
+            device_from_file = {"url": url, "code": code, "source": "device-file"}
+
+    log_tail_raw = tail_lines(LOG_FILE, lines=700)
+    log_tail = strip_ansi(log_tail_raw)
+    device = device_from_file or extract_device_auth_from_log(log_tail)
     last_hint = last_meaningful_log_line(log_tail)
+
+    refresh_present = bool(str(oauth.get("refresh_token") or "").strip())
+    access_present = bool(str(oauth.get("access_token") or "").strip())
+    session_present = bool(str(session.get("sessionToken") or "").strip() and str(session.get("identityToken") or "").strip())
 
     return {
         "time": int(time.time()),
@@ -253,6 +273,9 @@ def status_payload() -> dict[str, Any]:
         },
         "auth": {
             "stateFilePresent": AUTH_STATE_PATH.exists(),
+            "refreshTokenPresent": refresh_present,
+            "accessTokenPresent": access_present,
+            "sessionPresent": session_present,
             "sessionExpiresAt": str(session.get("expiresAt") or "").strip() or None,
             "profile": (
                 {
@@ -277,6 +300,7 @@ def status_payload() -> dict[str, Any]:
             "serverDir": str(SERVER_DIR),
             "jarPath": str(JAR_PATH),
             "assetsPath": str(ASSETS_PATH),
+            "deviceStatusPath": str(DEVICE_STATUS_PATH),
         },
     }
 
@@ -351,11 +375,15 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/api/log":
             qs = parse_qs(parsed.query)
             lines_raw = (qs.get("lines") or ["400"])[0]
+            raw = (qs.get("raw") or ["0"])[0].strip()
             try:
                 lines = max(1, min(int(lines_raw, 10), 20000))
             except Exception:
                 lines = 400
-            body = tail_lines(LOG_FILE, lines=lines).encode("utf-8", errors="replace")
+            text = tail_lines(LOG_FILE, lines=lines)
+            if raw not in ("1", "true", "yes", "y", "on"):
+                text = strip_ansi(text)
+            body = text.encode("utf-8", errors="replace")
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
@@ -484,6 +512,8 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 if AUTH_STATE_PATH.exists():
                     AUTH_STATE_PATH.unlink()
+                if DEVICE_STATUS_PATH.exists():
+                    DEVICE_STATUS_PATH.unlink()
             except Exception as exc:
                 self.send_response(HTTPStatus.INTERNAL_SERVER_ERROR)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
